@@ -92,28 +92,28 @@ jobs:
         path: |
           src/build/parser
 
-OSX:
-  runs-on: macos-latest
-  strategy:
-    fail-fast: false
+  OSX:
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
 
-  name: OSX Latest / clang
-  steps:
-  - name: Checkout
-    uses: actions/checkout@v2
+    name: OSX Latest / clang
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
 
-  - name: Build with clang
-    env:
-      CC: clang
-      CXX: clang++
-    run: |
-      cd src/build
-      chmod u+x ./build-release-osx.sh
-      ./build-release-osx.sh
+    - name: Build with clang
+      env:
+        CC: clang
+        CXX: clang++
+      run: |
+        cd src/build
+        chmod u+x ./build-release-osx.sh
+        ./build-release-osx.sh
 
-  - name: Upload artifacts
-    uses: actions/upload-artifact@v2
-    with:
-      name: bin-osxx64-clang.Release
-      path: |
-        src/build/parser
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: bin-osxx64-clang.Release
+        path: |
+          src/build/parser
