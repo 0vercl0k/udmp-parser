@@ -825,7 +825,7 @@ public:
           CurrentStreamDirectory->StreamType, CurrentStreamDirectory);
 
       if (!Inserted) {
-        printf("There are more than one stream of type %" PRId32 "\n",
+        printf("There are more than one stream of type %" PRIu32 "\n",
                CurrentStreamDirectory->StreamType);
         return false;
       }
@@ -858,7 +858,7 @@ public:
 
       const auto &Result = ParseStream(Directory->second);
       if (!Result.has_value()) {
-        printf("Seems like there is a missing case for %" PRId32
+        printf("Seems like there is a missing case for %" PRIu32
                " in ParseStream?\n",
                Type);
         return false;
@@ -869,7 +869,7 @@ public:
       //
 
       if (!*Result) {
-        printf("Failed to parse stream %" PRId32 ".\n", Type);
+        printf("Failed to parse stream %" PRIu32 ".\n", Type);
         return false;
       }
     }
