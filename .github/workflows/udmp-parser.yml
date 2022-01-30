@@ -108,8 +108,8 @@ jobs:
         CXX: clang++
       run: |
         cd src/build
-        chmod u+x ./build-release-osx.sh
-        ./build-release-osx.sh
+        chmod u+x ./build-release.sh
+        ./build-release.sh
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v2
