@@ -804,7 +804,7 @@ public:
 
       const auto StreamStart = FileMap_.ViewBase() + Rva;
       if (!FileMap_.InBounds(StreamStart, DataSize)) {
-        printf("The stream number %" PRId32 " is out-of-bounds\n", StreamIdx);
+        printf("The stream number %" PRIu32 " is out-of-bounds\n", StreamIdx);
         return false;
       }
 
@@ -826,7 +826,7 @@ public:
 
       if (!Inserted) {
         printf("There are more than one stream of type %" PRIu32 "\n",
-               CurrentStreamDirectory->StreamType);
+               uint32_t(CurrentStreamDirectory->StreamType));
         return false;
       }
     }
@@ -860,7 +860,7 @@ public:
       if (!Result.has_value()) {
         printf("Seems like there is a missing case for %" PRIu32
                " in ParseStream?\n",
-               Type);
+               uint32_t(Type));
         return false;
       }
 
@@ -869,7 +869,7 @@ public:
       //
 
       if (!*Result) {
-        printf("Failed to parse stream %" PRIu32 ".\n", Type);
+        printf("Failed to parse stream %" PRIu32 ".\n", uint32_t(Type));
         return false;
       }
     }
@@ -1088,7 +1088,7 @@ private:
           (void *)(FileMap_.ViewBase() + CurrentThread->ThreadContext.Rva);
       const auto ThreadContextDataSize = CurrentThread->ThreadContext.DataSize;
       if (!FileMap_.InBounds(ThreadContext, ThreadContextDataSize)) {
-        printf("The thread context number %" PRId32 " is out of bounds.\n",
+        printf("The thread context number %" PRIu32 " is out of bounds.\n",
                ThreadIdx);
         return false;
       }
