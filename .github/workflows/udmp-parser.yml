@@ -31,13 +31,13 @@ jobs:
       if: matrix.generator == 'ninja'
       run: |
         cd src\build
-        .\build-release.bat %{{ matric.arch }}
+        .\build-release.bat ${{ matric.arch }}
 
     - name: Build with msvc
       if: matrix.generator == 'msvc'
       run: |
         cd src\build
-        .\build-release-msvc.bat %{{ matric.arch }}
+        .\build-release-msvc.bat ${{ matric.arch }}
 
     - name: Upload artifacts
       if: matrix.generator == 'ninja'
