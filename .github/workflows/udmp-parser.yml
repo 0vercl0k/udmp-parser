@@ -49,8 +49,8 @@ jobs:
       with:
         name: bin-${{ matrix.arch }}.RelWithDebInfo
         path: |
-          src/build/parser.exe
-          src/build/parser.pdb
+          src/build/parser/parser.exe
+          src/build/parser/parser.pdb
 
   Linux:
     runs-on: ubuntu-20.04
