@@ -14,8 +14,9 @@ jobs:
       fail-fast: false
       matrix:
         generator: ['ninja', 'msvc']
+        arch: ['x86', 'x64']
 
-    name: Windows latest / ${{ matrix.generator }}
+    name: Windows latest / ${{ matrix.generator }}.${{ matrix.arch }}
     steps:
     - name: Checkout
       uses: actions/checkout@v2
@@ -30,19 +31,19 @@ jobs:
       if: matrix.generator == 'ninja'
       run: |
         cd src\build
-        .\build-release.bat
+        .\build-release.bat %{{ matric.arch }}
 
     - name: Build with msvc
       if: matrix.generator == 'msvc'
       run: |
         cd src\build
-        .\build-release-msvc.bat
+        .\build-release-msvc.bat %{{ matric.arch }}
 
     - name: Upload artifacts
       if: matrix.generator == 'ninja'
       uses: actions/upload-artifact@v2
       with:
-        name: bin-win64.RelWithDebInfo
+        name: bin-${{ matrix.arch }}.RelWithDebInfo
         path: |
           src/build/parser.exe
           src/build/parser.pdb

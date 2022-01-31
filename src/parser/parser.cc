@@ -59,10 +59,14 @@ const char *TypeToString(const uint32_t Type) {
 
 void PrintX86Context(const udmpparser::Context32_t &C, const int Prefix = 0) {
   printf("%*ceax=%08" PRIx32 " ebx=%08" PRIx32 " ecx=%08" PRIx32
-         " edx=%08" PRIx32 "esi=%08" PRIx32 " edi=%08" PRIx32 "\n",
+         " edx=%08" PRIx32 " esi=%08" PRIx32 " edi=%08" PRIx32 "\n",
          Prefix, ' ', C.Eax, C.Ebx, C.Ecx, C.Edx, C.Esi, C.Edi);
   printf("%*ceip=%08" PRIx32 " esp=%08" PRIx32 " ebp=%08" PRIx32 "\n", Prefix,
          ' ', C.Eip, C.Esp, C.Ebp);
+  printf("%*ccs=%04x  ss=%04x  ds=%04x  es=%04x  fs=%04x gs=%04x              "
+         "efl=%08x\n",
+         Prefix, ' ', C.SegCs, C.SegSs, C.SegDs, C.SegEs, C.SegFs, C.SegGs,
+         C.EFlags);
 }
 
 //
@@ -82,6 +86,52 @@ void PrintX64Context(const udmpparser::Context64_t &C, const int Prefix = 0) {
          Prefix, ' ', C.R11, C.R12, C.R13);
   printf("%*cr14=%016" PRIx64 " r15=%016" PRIx64 "\n", Prefix, ' ', C.R14,
          C.R15);
+  printf("%*ccs=%04x  ss=%04x  ds=%04x  es=%04x  fs=%04x gs=%04x              "
+         "efl=%08x\n",
+         Prefix, ' ', C.SegCs, C.SegSs, C.SegDs, C.SegEs, C.SegFs, C.SegGs,
+         C.EFlags);
+  printf("%*cfpcw=%04x    fpsw=%04x    fptw=%04x\n", Prefix, ' ', C.ControlWord,
+         C.StatusWord, C.TagWord);
+  printf("%*c  st0=%016" PRIx64 "%016" PRIx64 "       st1=%016" PRIx64
+         "%016" PRIx64 "\n",
+         Prefix, ' ', C.FloatRegisters[0].High, C.FloatRegisters[0].Low,
+         C.FloatRegisters[1].High, C.FloatRegisters[1].Low);
+  printf("%*c  st2=%016" PRIx64 "%016" PRIx64 "       st3=%016" PRIx64
+         "%016" PRIx64 "\n",
+         Prefix, ' ', C.FloatRegisters[2].High, C.FloatRegisters[2].Low,
+         C.FloatRegisters[3].High, C.FloatRegisters[3].Low);
+  printf("%*c  st4=%016" PRIx64 "%016" PRIx64 "       st5=%016" PRIx64
+         "%016" PRIx64 "\n",
+         Prefix, ' ', C.FloatRegisters[4].High, C.FloatRegisters[4].Low,
+         C.FloatRegisters[5].High, C.FloatRegisters[5].Low);
+  printf("%*c  st6=%016" PRIx64 "%016" PRIx64 "       st7=%016" PRIx64
+         "%016" PRIx64 "\n",
+         Prefix, ' ', C.FloatRegisters[6].High, C.FloatRegisters[6].Low,
+         C.FloatRegisters[7].High, C.FloatRegisters[7].Low);
+  printf("%*c xmm0=%016" PRIx64 "%016" PRIx64 "      xmm1=%016" PRIx64
+         "%016" PRIx64 "\n",
+         Prefix, ' ', C.Xmm0.High, C.Xmm0.Low, C.Xmm1.High, C.Xmm1.Low);
+  printf("%*c xmm2=%016" PRIx64 "%016" PRIx64 "      xmm3=%016" PRIx64
+         "%016" PRIx64 "\n",
+         Prefix, ' ', C.Xmm2.High, C.Xmm2.Low, C.Xmm3.High, C.Xmm3.Low);
+  printf("%*c xmm4=%016" PRIx64 "%016" PRIx64 "      xmm5=%016" PRIx64
+         "%016" PRIx64 "\n",
+         Prefix, ' ', C.Xmm4.High, C.Xmm4.Low, C.Xmm5.High, C.Xmm5.Low);
+  printf("%*c xmm6=%016" PRIx64 "%016" PRIx64 "      xmm7=%016" PRIx64
+         "%016" PRIx64 "\n",
+         Prefix, ' ', C.Xmm6.High, C.Xmm6.Low, C.Xmm7.High, C.Xmm7.Low);
+  printf("%*c xmm8=%016" PRIx64 "%016" PRIx64 "      xmm9=%016" PRIx64
+         "%016" PRIx64 "\n",
+         Prefix, ' ', C.Xmm8.High, C.Xmm8.Low, C.Xmm9.High, C.Xmm9.Low);
+  printf("%*cxmm10=%016" PRIx64 "%016" PRIx64 "     xmm11=%016" PRIx64
+         "%016" PRIx64 "\n",
+         Prefix, ' ', C.Xmm10.High, C.Xmm10.Low, C.Xmm11.High, C.Xmm11.Low);
+  printf("%*cxmm12=%016" PRIx64 "%016" PRIx64 "     xmm13=%016" PRIx64
+         "%016" PRIx64 "\n",
+         Prefix, ' ', C.Xmm12.High, C.Xmm12.Low, C.Xmm13.High, C.Xmm13.Low);
+  printf("%*cxmm14=%016" PRIx64 "%016" PRIx64 "     xmm15=%016" PRIx64
+         "%016" PRIx64 "\n",
+         Prefix, ' ', C.Xmm14.High, C.Xmm14.Low, C.Xmm15.High, C.Xmm15.Low);
 }
 
 //
@@ -132,6 +182,14 @@ void Hexdump(const uint64_t Address, const void *Buffer, size_t Len,
 }
 
 } // namespace utils
+
+//
+// Delimiter.
+//
+
+#define DELIMITER                                                              \
+  "----------------------------------------------------------------------"     \
+  "----------"
 
 //
 // The options available for the parser.
@@ -221,6 +279,16 @@ void Help() {
 }
 
 int main(int argc, char *argv[]) {
+
+  //
+  // Show the help menu if no argument specified.
+  //
+
+  if (argc == 1) {
+    Help();
+    return EXIT_SUCCESS;
+  }
+
   //
   // Parse the options.
   //
@@ -231,6 +299,8 @@ int main(int argc, char *argv[]) {
     const bool IsLastArg = (ArgIdx + 1) >= argc;
     if (Arg == "-a") {
       Opts.ShowAll = true;
+    } else if (Arg == "-h") {
+      Opts.ShowHelp = true;
     } else if (Arg == "-mods") {
       Opts.ShowLoadedModules = true;
     } else if (Arg == "-mem") {
@@ -312,7 +382,7 @@ int main(int argc, char *argv[]) {
   //
 
   if (Opts.ShowLoadedModules || Opts.ShowAll) {
-    printf("----- LOADED MODULES -----\n");
+    printf(DELIMITER "\nLoaded modules:\n");
     const auto &Modules = UserDump.GetModules();
     for (const auto &[Base, ModuleInfo] : Modules) {
       printf("  %016" PRIx64 ": %s\n", Base, ModuleInfo.ModuleName.c_str());
@@ -324,7 +394,7 @@ int main(int argc, char *argv[]) {
   //
 
   if (Opts.ShowMemoryMap || Opts.ShowAll) {
-    printf("----- MEMORY MAP -----\n");
+    printf(DELIMITER "\nMemory map:\n");
     for (const auto &[_, Descriptor] : UserDump.GetMem()) {
 
       //
@@ -408,7 +478,7 @@ int main(int argc, char *argv[]) {
   //
 
   if (Opts.ShowThreads || Opts.ShowAll) {
-    printf("----- THREADS -----\n");
+    printf(DELIMITER "\nThreads:\n");
     const auto &ForegroundTid = UserDump.GetForegroundThreadId();
     for (const auto &[Tid, Thread] : UserDump.GetThreads()) {
 
@@ -442,14 +512,15 @@ int main(int argc, char *argv[]) {
   //
 
   if (Opts.DumpAddress.has_value()) {
-    printf("----- DUMPING MEMORY -----\n");
+    printf(DELIMITER "\nMemory:\n");
 
     //
     // Find a block of virtual memory that overlaps with the address we want to
     // dump.
     //
 
-    const auto &Block = UserDump.GetMemBlock(*Opts.DumpAddress);
+    const uint64_t DumpAddress = *Opts.DumpAddress;
+    const auto &Block = UserDump.GetMemBlock(DumpAddress);
 
     //
     // If we found a match, let's go.
@@ -465,18 +536,26 @@ int main(int argc, char *argv[]) {
       const uint64_t BlockSize = Block->DataSize;
       const uint64_t BlockEnd = BlockStart + BlockSize;
       printf("%016" PRIx64 " -> %016" PRIx64 "\n", BlockStart, BlockEnd);
+      if (BlockSize > 0) {
 
-      //
-      // Calculate where from we need to start dumping, and the appropriate
-      // amount of bytes to dump.
-      //
+        //
+        // Calculate where from we need to start dumping, and the appropriate
+        // amount of bytes to dump.
+        //
 
-      const uint64_t OffsetFromStart = *Opts.DumpAddress - BlockStart;
-      const uint64_t Remaining = BlockSize - OffsetFromStart;
-      const uint64_t MaxSize = 0x100;
-      const uint64_t DumpSize = std::min(MaxSize, Remaining);
-      utils::Hexdump(BlockStart + OffsetFromStart,
-                     Block->Data + OffsetFromStart, DumpSize, 2);
+        const uint64_t OffsetFromStart = DumpAddress - BlockStart;
+        const uint64_t Remaining = BlockSize - OffsetFromStart;
+        const uint64_t MaxSize = 0x100;
+        const uint64_t DumpSize = std::min(MaxSize, Remaining);
+        utils::Hexdump(BlockStart + OffsetFromStart,
+                       Block->Data + OffsetFromStart, size_t(DumpSize), 2);
+      } else {
+        printf("The dump does not have the content of the memory at %" PRIx64
+               "\n",
+               DumpAddress);
+      }
+    } else {
+      printf("No memory block were found for %" PRIx64 ".\n", DumpAddress);
     }
   }
 

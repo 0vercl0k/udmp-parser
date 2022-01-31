@@ -198,7 +198,7 @@ static_assert(sizeof(Context64_t) == 0x4d0);
 namespace dmp {
 
 struct Header_t {
-  static const uint32_t ExpectedSignature = 0x4d'44'4d'50; // 'PMDM';
+  static const uint32_t ExpectedSignature = 0x50'4d'44'4d; // 'PMDM';
   static const uint32_t ValidFlagsMask = 0x00'1f'ff'ff;
   uint32_t Signature;
   uint16_t Version;
@@ -212,8 +212,9 @@ struct Header_t {
 
   bool LooksGood() const {
     if (Signature != ExpectedSignature) {
-      printf("The signature (%x) does not match the expected signature (%x)\n",
-             Signature, ExpectedSignature);
+      printf("The signature (%" PRIx32
+             ") does not match the expected signature.\n",
+             Signature);
       return false;
     }
 
@@ -760,10 +761,19 @@ public:
     }
 
     //
-    // Verify the headers.
+    // Verify that the mapped file is big enough to pull the headers.
     //
 
     const auto Hdr = (dmp::Header_t *)FileMap_.ViewBase();
+    if (!FileMap_.InBounds(Hdr, sizeof(*Hdr))) {
+      printf("The header are not in bounds.\n");
+      return false;
+    }
+
+    //
+    // Verify that the header looks sane.
+    //
+
     if (!Hdr->LooksGood()) {
       printf("The header looks wrong.\n");
       return false;
@@ -915,7 +925,7 @@ public:
     const auto &Res =
         std::find_if(Mem_.begin(), Mem_.end(), [&](const auto &It) {
           return Address >= It.first &&
-                 Address < (It.first + It.second.DataSize);
+                 Address < (It.first + It.second.RegionSize);
         });
 
     if (Res != Mem_.end()) {
@@ -1147,11 +1157,11 @@ private:
     // Verify that the stream is big enough for the array of memory entries.
     //
 
-    const size_t StreamSize =
+    const uint64_t StreamSize =
         MemoryInfoList->SizeOfHeader +
         (MemoryInfoList->SizeOfEntry * MemoryInfoList->NumberOfEntries);
     if (StreamSize != StreamDirectory->Location.DataSize) {
-      printf("The MemoryInfoList stream size is not right\n");
+      printf("The MemoryInfoList stream size is not right.\n");
       return false;
     }
 
@@ -1317,7 +1327,7 @@ private:
 
     const auto Descriptor = (dmp::MemoryDescriptor64_t *)(Memory64List + 1);
     const auto NumberOfMemoryRanges = Memory64List->NumberOfMemoryRanges;
-    const size_t StreamSize =
+    const uint64_t StreamSize =
         sizeof(*Memory64List) + (NumberOfMemoryRanges * sizeof(*Descriptor));
     if (StreamDirectory->Location.DataSize < StreamSize) {
       printf("The Memory64List stream is not right.\n");
@@ -1343,7 +1353,7 @@ private:
 
       const auto CurrentDescriptor = &Descriptor[RangeIdx];
       const auto StartOfMemoryRange = CurrentDescriptor->StartOfMemoryRange;
-      const auto DataSize = CurrentDescriptor->DataSize;
+      const size_t DataSize = size_t(CurrentDescriptor->DataSize);
       if (!FileMap_.InBounds(CurrentData, DataSize)) {
         printf("The Memory64List memory content number %" PRIu32
                " has its data out-of-bounds.\n",
