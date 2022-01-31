@@ -257,8 +257,8 @@ struct Options_t {
 //
 
 void Help() {
-  printf("parser.exe [-a] [-mods] [-mem] [-t [<TID>] [-h] [-dump <addr>] "
-         "<udump path>\n");
+  printf("parser.exe [-a] [-mods] [-mem] [-t [<TID|main>] [-h] [-dump <addr>] "
+         "<dump path>\n");
   printf("\n");
   printf("Examples:\n");
   printf("  Show all:\n");
@@ -273,21 +273,12 @@ void Help() {
   printf("    parser.exe -t 1337 user.dmp\n");
   printf("  Show foreground thread:\n");
   printf("    parser.exe -t main user.dmp\n");
-  printf("  Show a memory page at a specific address:\n");
+  printf("  Dump a memory page at a specific address:\n");
   printf("    parser.exe -dump 0x7ff00 user.dmp\n");
   printf("\n");
 }
 
 int main(int argc, char *argv[]) {
-
-  //
-  // Show the help menu if no argument specified.
-  //
-
-  if (argc == 1) {
-    Help();
-    return EXIT_SUCCESS;
-  }
 
   //
   // Parse the options.
@@ -360,11 +351,12 @@ int main(int argc, char *argv[]) {
   }
 
   //
-  // Display help if wanted.
+  // Display help if wanted or no argument were specified.
   //
 
-  if (Opts.ShowHelp) {
+  if (argc == 1 || Opts.ShowHelp) {
     Help();
+    return argc == 1 ? EXIT_FAILURE : EXIT_SUCCESS;
   }
 
   //
