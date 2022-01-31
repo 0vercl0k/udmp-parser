@@ -31,7 +31,7 @@ jobs:
       if: matrix.generator == 'ninja'
       run: |
         cd src\build
-        .\build-release.bat ${{ matric.arch }}
+        .\build-release.bat
 
     - name: Build with msvc
       if: matrix.generator == 'msvc'
