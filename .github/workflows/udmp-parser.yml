@@ -15,6 +15,10 @@ jobs:
       matrix:
         generator: ['ninja', 'msvc']
         arch: ['win32', 'win64']
+        exclude:
+          # Ninja doesn't support the -A arch options with CMake
+          - generator: ninja
+            arch: win32
 
     name: Windows latest / ${{ matrix.generator }}.${{ matrix.arch }}
     steps:
