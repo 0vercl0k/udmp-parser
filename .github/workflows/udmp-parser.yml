@@ -2,11 +2,6 @@ name: Builds
 
 on: [push, pull_request]
 
-permissions:
-  actions: read
-  contents: read
-  security-events: write
-
 jobs:
   Windows:
     runs-on: windows-latest 
@@ -23,7 +18,7 @@ jobs:
     name: Windows latest / ${{ matrix.generator }}.${{ matrix.arch }}
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Add msbuild to PATH
       uses: microsoft/setup-msbuild@v1
@@ -45,7 +40,7 @@ jobs:
 
     - name: Upload artifacts
       if: matrix.generator == 'ninja'
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: bin-${{ matrix.arch }}.RelWithDebInfo
         path: |
@@ -62,19 +57,19 @@ jobs:
     name: Ubuntu 20.04 / ${{ matrix.compiler }}
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Installing dependencies
       run: |
         sudo apt-get -y update
-        sudo apt install -y g++-10 ninja-build
+        sudo apt install -y g++-12 ninja-build
         sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
 
     - name: Build with gcc
       if: matrix.compiler == 'gcc'
       env:
-        CC: gcc-10
-        CXX: g++-10
+        CC: gcc-12
+        CXX: g++-12
       run: |
         cd src/build
         chmod u+x ./build-release.sh
@@ -83,15 +78,15 @@ jobs:
     - name: Build with clang
       if: matrix.compiler == 'clang'
       env:
-        CC: clang-13
-        CXX: clang++-13
+        CC: clang-15
+        CXX: clang++-15
       run: |
         cd src/build
         chmod u+x ./build-release.sh
         ./build-release.sh
 
     - name: Upload artifacts
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: bin-lin64-${{ matrix.compiler }}.Release
         path: |
@@ -105,7 +100,7 @@ jobs:
     name: OSX Latest / clang
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Build with clang
       env:
@@ -117,7 +112,7 @@ jobs:
         ./build-release-osx.sh
 
     - name: Upload artifacts
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: bin-osxx64-clang.Release
         path: |
