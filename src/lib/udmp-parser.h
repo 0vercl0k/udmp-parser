@@ -31,6 +31,12 @@
 #elif defined(linux) || defined(__linux) || defined(__FreeBSD__) ||            \
     defined(__FreeBSD_kernel__) || defined(__MACH__)
 #define LINUX
+#include <errno.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #define EXIT_FAILURE 1
 #define EXIT_SUCCESS 0
@@ -575,13 +581,6 @@ public:
 };
 
 #elif defined(LINUX)
-
-#include <errno.h>
-#include <fcntl.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
 
 class FileMap_t {
   void *ViewBase_ = nullptr;
