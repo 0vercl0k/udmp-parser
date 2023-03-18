@@ -11,25 +11,38 @@
 #include <unordered_map>
 #include <variant>
 #include <vector>
+#include <cstdlib>
 
 #if defined(__i386__) || defined(_M_IX86)
 #define ARCH_X86
 #elif defined(__amd64__) || defined(_M_X64)
 #define ARCH_X64
+#elif defined(__arm__) || defined(_M_ARM)
+#define ARCH_ARM
+#elif defined(__aarch64__) || defined(_M_ARM64)
+#define ARCH_AARCH64
 #else
 #error Platform not supported.
 #endif
 
-#if defined(WIN32) || defined(WIN64) || defined(_WIN32) || defined(_WIN64)
+#if defined(_WIN32)
+
 #define WINDOWS
-#include <windows.h>
-#if defined ARCH_X86
+#include <Windows.h>
+
+#if defined(ARCH_X86)
 #define WINDOWS_X86
-#elif defined ARCH_X64
+#elif defined(ARCH_X64)
 #define WINDOWS_X64
-#endif
+#elif defined(ARCH_ARM)
+#define WINDOWS_ARM
+#elif defined(ARCH_AARCH64)
+#define WINDOWS_AARCH64
+#endif // ARCH_XXX
+
 #elif defined(linux) || defined(__linux) || defined(__FreeBSD__) ||            \
     defined(__FreeBSD_kernel__) || defined(__MACH__)
+
 #define LINUX
 #include <errno.h>
 #include <fcntl.h>
@@ -38,18 +51,21 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#define EXIT_FAILURE 1
-#define EXIT_SUCCESS 0
-
-#if defined ARCH_X86
+#if defined(ARCH_X86)
 #define LINUX_X86
-#elif defined ARCH_X64
+#elif defined(ARCH_X64)
 #define LINUX_X64
-#endif
+#elif defined(ARCH_ARM)
+#define LINUX_ARM
+#elif defined(ARCH_AARCH64)
+#define LINUX_AARCH64
+#endif // ARCH_XXX
 
 #else
+
 #error Platform not supported.
-#endif
+
+#endif // _WIN32
 
 namespace udmpparser {
 #pragma pack(push)
