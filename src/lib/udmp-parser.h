@@ -1,17 +1,22 @@
 // Axel '0vercl0k' Souchet - January 22 2022
 #pragma once
 #include <algorithm>
+#include <array>
 #include <cinttypes>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
+#include <exception>
+#include <filesystem>
 #include <map>
+#include <memory>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <variant>
 #include <vector>
-#include <cstdlib>
 
 #if defined(__i386__) || defined(_M_IX86)
 #define ARCH_X86
@@ -68,8 +73,26 @@
 #endif // _WIN32
 
 namespace udmpparser {
+
+class ParsingError : public std::exception {
+public:
+  explicit ParsingError(const std::string &message) : message_(message) {}
+
+  const char *what() const noexcept override { return message_.c_str(); }
+
+private:
+  std::string message_;
+};
+
+
 #pragma pack(push)
 #pragma pack(1)
+
+struct Version {
+  static inline const uint16_t Major = 0;
+  static inline const uint16_t Minor = 4;
+  static inline const std::string Release = "";
+};
 
 enum class ProcessorArch_t : uint16_t {
   X86 = 0,
@@ -89,7 +112,7 @@ struct FloatingSaveArea32_t {
   uint32_t ErrorSelector;
   uint32_t DataOffset;
   uint32_t DataSelector;
-  uint8_t RegisterArea[kWOW64_SIZE_OF_80387_REGISTERS];
+  std::array<uint8_t, kWOW64_SIZE_OF_80387_REGISTERS> RegisterArea;
   uint32_t Cr0NpxState;
 };
 
@@ -122,7 +145,7 @@ struct Context32_t {
   uint32_t EFlags;
   uint32_t Esp;
   uint32_t SegSs;
-  uint8_t ExtendedRegisters[kWOW64_MAXIMUM_SUPPORTED_EXTENSION];
+  std::array<uint8_t, kWOW64_MAXIMUM_SUPPORTED_EXTENSION> ExtendedRegisters;
 };
 
 static_assert(sizeof(Context32_t) == 0x2cc);
@@ -186,7 +209,7 @@ struct Context64_t {
   uint16_t Reserved3;
   uint32_t MxCsr2;
   uint32_t MxCsr_Mask;
-  uint128_t FloatRegisters[8];
+  std::array<uint128_t, 8> FloatRegisters;
   uint128_t Xmm0;
   uint128_t Xmm1;
   uint128_t Xmm2;
@@ -204,7 +227,7 @@ struct Context64_t {
   uint128_t Xmm14;
   uint128_t Xmm15;
   uint8_t Padding[0x60];
-  uint128_t VectorRegister[26];
+  std::array<uint128_t, 26> VectorRegister;
   uint64_t VectorControl;
   uint64_t DebugControl;
   uint64_t LastBranchToRip;
@@ -220,8 +243,8 @@ static_assert(sizeof(Context64_t) == 0x4d0);
 namespace dmp {
 
 struct Header_t {
-  static const uint32_t ExpectedSignature = 0x50'4d'44'4d; // 'PMDM';
-  static const uint32_t ValidFlagsMask = 0x00'1f'ff'ff;
+  static inline const uint32_t ExpectedSignature = 0x50'4d'44'4d; // 'PMDM';
+  static inline const uint32_t ValidFlagsMask = 0x00'1f'ff'ff;
   uint32_t Signature;
   uint16_t Version;
   uint16_t ImplementationVersion;
@@ -401,7 +424,7 @@ struct ExceptionRecord_t {
   uint64_t ExceptionAddress;
   uint32_t NumberParameters;
   uint32_t __unusedAlignment;
-  uint64_t ExceptionInformation[kEXCEPTION_MAXIMUM_PARAMETERS];
+  std::array<uint64_t, kEXCEPTION_MAXIMUM_PARAMETERS> ExceptionInformation;
 };
 
 static_assert(sizeof(ExceptionRecord_t) == 0x98);
@@ -665,7 +688,7 @@ struct MemBlock_t {
   uint32_t State = 0;
   uint32_t Protect = 0;
   uint32_t Type = 0;
-  const uint8_t *Data = nullptr;
+  std::unique_ptr<uint8_t[]> Data{};
   uint64_t DataSize = 0;
 
   MemBlock_t(const dmp::MemoryInfo_t &Info_)
@@ -673,6 +696,24 @@ struct MemBlock_t {
         AllocationProtect(Info_.AllocationProtect),
         RegionSize(Info_.RegionSize), State(Info_.State),
         Protect(Info_.Protect), Type(Info_.Type){};
+
+  std::string to_string() const {
+    std::stringstream ss;
+    ss << "[MemBlock_t(";
+    ss << "BaseAddress=0x" << std::hex << BaseAddress;
+    ss << ", AllocationBase=0x" << AllocationBase;
+    ss << ", AllocationProtect=0x" << AllocationProtect;
+    ss << ", RegionSize=0x" << RegionSize;
+    ss << ")]";
+    return ss.str();
+  }
+
+  void SetData(const uint8_t *Data_, const size_t DataSize_) {
+    auto Temp = std::make_unique<uint8_t[]>(DataSize_);
+    memcpy(Temp.get(), Data_, DataSize_);
+    Data.swap(Temp);
+    DataSize = DataSize_;
+  }
 };
 
 struct Module_t {
@@ -682,18 +723,36 @@ struct Module_t {
   uint32_t TimeDateStamp = 0;
   std::string ModuleName;
   dmp::FixedFileInfo_t VersionInfo;
-  const void *CvRecord = nullptr;
+  std::unique_ptr<uint8_t[]> CvRecord{};
   uint32_t CvRecordSize = 0;
-  const void *MiscRecord = nullptr;
+  std::unique_ptr<uint8_t[]> MiscRecord{};
   uint32_t MiscRecordSize = 0;
 
   Module_t(const dmp::ModuleEntry_t &M, const std::string &Name,
            const void *CvRecord_, const void *MiscRecord_)
       : BaseOfImage(M.BaseOfImage), SizeOfImage(M.SizeOfImage),
         CheckSum(M.CheckSum), TimeDateStamp(M.TimeDateStamp), ModuleName(Name),
-        VersionInfo(M.VersionInfo), CvRecord(CvRecord_),
-        CvRecordSize(M.CvRecord.DataSize), MiscRecord(MiscRecord_),
-        MiscRecordSize(M.MiscRecord.DataSize) {}
+        VersionInfo(M.VersionInfo), CvRecordSize(M.CvRecord.DataSize),
+        MiscRecordSize(M.MiscRecord.DataSize) {
+    //
+    // Take ownership of `CvRecord` and `MiscRecord`
+    //
+    CvRecord = std::make_unique<uint8_t[]>(CvRecordSize);
+    ::memcpy(CvRecord.get(), CvRecord_, CvRecordSize);
+
+    MiscRecord = std::make_unique<uint8_t[]>(MiscRecordSize);
+    ::memcpy(MiscRecord.get(), MiscRecord_, MiscRecordSize);
+  }
+
+  std::string to_string() const {
+    std::stringstream ss;
+    ss << "Module_t(";
+    ss << "BaseOfImage=0x" << std::hex << BaseOfImage;
+    ss << ", SizeOfImage=0x" << SizeOfImage;
+    ss << ", ModuleName=" << ModuleName;
+    ss << ")";
+    return ss.str();
+  }
 };
 
 class UnknownContext_t {};
@@ -718,6 +777,16 @@ struct Thread_t {
     } else if (*Arch_ == ProcessorArch_t::AMD64) {
       Context = *(Context64_t *)Context_;
     }
+  }
+
+  std::string to_string() const {
+    std::stringstream ss;
+    ss << "Thread(";
+    ss << "Id=0x" << std::hex << ThreadId << ", ";
+    ss << "SuspendCount=0x" << std::hex << SuspendCount << ", ";
+    ss << "Teb=0x" << std::hex << Teb;
+    ss << ")";
+    return ss.str();
   }
 };
 
@@ -764,13 +833,17 @@ public:
   // Parse the file.
   //
 
-  bool Parse(const char *PathFile) {
+  bool Parse(std::filesystem::path const &PathFile) {
 
     //
     // Map a view of the file.
     //
+    if (!std::filesystem::exists(PathFile)) {
+      printf("Invalid parameter.\n");
+      return false;
+    }
 
-    if (!FileMap_.MapFile(PathFile)) {
+    if (!FileMap_.MapFile(PathFile.string().c_str())) {
       printf("MapFile failed.\n");
       return false;
     }
@@ -930,13 +1003,9 @@ public:
     return true;
   }
 
-  const std::map<uint64_t, MemBlock_t> GetMem() const { return Mem_; }
+  const std::map<uint64_t, MemBlock_t> &GetMem() const { return Mem_; }
 
-  const MemBlock_t *GetMemBlock(const void *Address) const {
-    return GetMemBlock(uint64_t(Address));
-  }
-
-  const MemBlock_t *GetMemBlock(const uint64_t Address) const {
+  const MemBlock_t *GetMemBlock(const uintptr_t Address) const {
     const auto &Res =
         std::find_if(Mem_.begin(), Mem_.end(), [&](const auto &It) {
           return Address >= It.first &&
@@ -950,11 +1019,7 @@ public:
     return nullptr;
   }
 
-  const Module_t *GetModule(const void *Address) const {
-    return GetModule(uint64_t(Address));
-  }
-
-  const Module_t *GetModule(const uint64_t Address) const {
+  const Module_t *GetModule(const uintptr_t Address) const {
 
     //
     // Look for a module that includes this address.
@@ -985,6 +1050,32 @@ public:
 
   std::optional<uint32_t> GetForegroundThreadId() const {
     return ForegroundThreadId_;
+  }
+
+  std::string to_string() const {
+    std::stringstream ss;
+    ss << "UserDumpParser(";
+    ss << "ModuleNb=" << Modules_.size();
+    ss << ", ThreadNb=" << Threads_.size();
+    ss << ")";
+    return ss.str();
+  }
+
+  std::vector<uint8_t> ReadMemory(uintptr_t Address, size_t Size) const {
+    std::vector<uint8_t> Out;
+
+    auto const Block = GetMemBlock(Address);
+    if (!Block) {
+      throw ParsingError(std::string("Invalid address"));
+    }
+
+    const uint64_t OffsetFromStart = Address - Block->BaseAddress;
+    const size_t RemainingSize =
+        Block->DataSize - static_cast<size_t>(OffsetFromStart);
+    const size_t DumpSize = std::min(RemainingSize, Size);
+    Out.resize(DumpSize);
+    ::memcpy(Out.data(), (void *)(Block->Data.get() + OffsetFromStart), DumpSize);
+    return Out;
   }
 
 private:
@@ -1380,7 +1471,7 @@ private:
       // If we don't find an existing entry, there is something funky going on.
       //
 
-      const auto &It = Mem_.find(StartOfMemoryRange);
+      auto const &It = Mem_.find(StartOfMemoryRange);
       if (It == Mem_.end()) {
         printf("The memory region starting at %" PRIx64
                " does not exist in the map.\n",
@@ -1391,10 +1482,11 @@ private:
       //
       // Update the entry.
       //
-
-      It->second.Data = CurrentData;
-      It->second.DataSize = DataSize;
-      CurrentData += DataSize;
+      {
+        MemBlock_t &Block = It->second;
+        Block.SetData(CurrentData, DataSize);
+        CurrentData += DataSize;
+      }
     }
 
     return true;

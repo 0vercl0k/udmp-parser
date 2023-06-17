@@ -540,7 +540,7 @@ int main(int argc, char *argv[]) {
         const uint64_t MaxSize = 0x100;
         const uint64_t DumpSize = std::min(MaxSize, Remaining);
         utils::Hexdump(BlockStart + OffsetFromStart,
-                       Block->Data + OffsetFromStart, size_t(DumpSize), 2);
+                       &Block->Data[OffsetFromStart], size_t(DumpSize), 2);
       } else {
         printf("The dump does not have the content of the memory at %" PRIx64
                "\n",
