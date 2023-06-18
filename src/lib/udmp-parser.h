@@ -709,7 +709,7 @@ struct MemBlock_t {
 
   void SetData(const uint8_t *Data_, const size_t DataSize_) {
     auto Temp = std::make_unique<uint8_t[]>(DataSize_);
-    memcpy(Temp.get(), Data_, DataSize_);
+    ::memcpy(Temp.get(), Data_, DataSize_);
     Data.swap(Temp);
     DataSize = DataSize_;
   }
@@ -722,9 +722,9 @@ struct Module_t {
   uint32_t TimeDateStamp = 0;
   std::string ModuleName;
   dmp::FixedFileInfo_t VersionInfo;
-  std::unique_ptr<uint8_t[]> CvRecord{};
+  std::unique_ptr<uint8_t[]> CvRecord;
   uint32_t CvRecordSize = 0;
-  std::unique_ptr<uint8_t[]> MiscRecord{};
+  std::unique_ptr<uint8_t[]> MiscRecord;
   uint32_t MiscRecordSize = 0;
 
   Module_t(const dmp::ModuleEntry_t &M, const std::string &Name,
@@ -838,7 +838,7 @@ public:
     // Map a view of the file.
     //
     if (!std::filesystem::exists(PathFile)) {
-      printf("Invalid parameter.\n");
+      printf("The dump file specified does not exist.\n");
       return false;
     }
 
