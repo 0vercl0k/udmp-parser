@@ -84,7 +84,6 @@ private:
   std::string message_;
 };
 
-
 #pragma pack(push)
 #pragma pack(1)
 
@@ -1061,20 +1060,19 @@ public:
     return ss.str();
   }
 
-  std::vector<uint8_t> ReadMemory(uintptr_t Address, size_t Size) const {
-    std::vector<uint8_t> Out;
-
+  std::vector<uint8_t> ReadMemory(const uintptr_t Address, const size_t Size) const {
     auto const Block = GetMemBlock(Address);
     if (!Block) {
-      throw ParsingError(std::string("Invalid address"));
+      throw ParsingError("Invalid address");
     }
 
-    const uint64_t OffsetFromStart = Address - Block->BaseAddress;
+    const uintptr_t OffsetFromStart = Address - (uintptr_t)Block->BaseAddress;
     const size_t RemainingSize =
-        Block->DataSize - static_cast<size_t>(OffsetFromStart);
+        static_cast<size_t>(Block->DataSize) - static_cast<size_t>(OffsetFromStart);
     const size_t DumpSize = std::min(RemainingSize, Size);
-    Out.resize(DumpSize);
-    ::memcpy(Out.data(), (void *)(Block->Data.get() + OffsetFromStart), DumpSize);
+    std::vector<uint8_t> Out(DumpSize);
+    ::memcpy(Out.data(), (void *)(Block->Data.get() + OffsetFromStart),
+             DumpSize);
     return Out;
   }
 
@@ -1482,11 +1480,8 @@ private:
       //
       // Update the entry.
       //
-      {
-        MemBlock_t &Block = It->second;
-        Block.SetData(CurrentData, DataSize);
-        CurrentData += DataSize;
-      }
+      It->second.SetData(CurrentData, DataSize);
+      CurrentData += DataSize;
     }
 
     return true;

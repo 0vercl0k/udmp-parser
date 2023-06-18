@@ -4,151 +4,95 @@ on: [push, pull_request]
 
 
 jobs:
-  Windows:
-    runs-on: windows-latest
+  parser:
     strategy:
       fail-fast: false
       matrix:
-        generator: ['ninja', 'msvc']
-        arch: ['x64'] #, 'x86', 'arm64']
-        python-version: [3.9]
-        exclude:
-          # Ninja doesn't support the -A arch options with CMake
-          - generator: ninja
-            arch: x86
+        variant:
+          - {os: windows-latest, generator: msvc, arch: x64, config: RelWithDebInfo}
+          - {os: windows-latest, generator: ninja, arch: x64, config: RelWithDebInfo}
+          - {os: windows-latest, generator: msvc, arch: win32, config: RelWithDebInfo}
+          - {os: windows-latest, generator: msvc, arch: arm64, config: RelWithDebInfo}
+          - {os: ubuntu-latest, generator: gcc, arch: , config: RelWithDebInfo}
+          - {os: ubuntu-latest, generator: clang, arch: , config: RelWithDebInfo}
+          - {os: macos-latest, generator: clang, arch: , config: Release}
+    runs-on: ${{ matrix.variant.os }}
+    name: parser / ${{ matrix.variant.os }} / ${{ matrix.variant.generator }} / ${{ matrix.variant.arch }}
     env:
-      CMAKE_CONFIG: RelWithDebInfo
-    name: Windows latest / ${{ matrix.generator }}.${{ matrix.arch }}
+      NB_CPU: 1
+      CMAKE_FLAGS: "-DBUILD_PARSER:BOOL=ON -DBUILD_PYTHON_BINDING:BOOL=OFF"
     steps:
     - name: Checkout
       uses: actions/checkout@v3
 
-    - name: Setup Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
-
-    - name: Install Python pre-requisites
-      shell: pwsh
+    - name: Environment Setup (Windows)
+      if: matrix.variant.os == 'windows-latest'
       run: |
-        python -m pip install --upgrade pip setuptools wheel
-        python -m pip install --user --upgrade -r src/python/requirements.txt
-
-    - name: Build with Ninja/cl
-      if: matrix.generator == 'ninja'
-      run: |
-        cd src\build
-        .\build-release.bat
-
-    - name: Build (msvc)
-      if: matrix.generator == 'msvc'
-      shell: pwsh
-      run: |
+        echo "NB_CPU=$env:NUMBER_OF_PROCESSORS" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        echo "CMAKE_ARCH='-A ${{ matrix.variant.arch }}'" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         Import-Module .\.github\Invoke-VisualStudio.ps1
-        Invoke-VisualStudio2022${{ matrix.arch }}
-        mkdir ./build
-        cmake -S ./src -B ./build -A ${{ matrix.arch }} ${{ env.CMAKE_CONFIG }}
-        cmake --build ./build --verbose --config ${{ env.CMAKE_CONFIG }}
-        cmake --install ./build --config ${{ env.CMAKE_CONFIG }} --prefix ./artifact --verbose
+        If ("${{ matrix.variant.arch }}" -ieq "Win32") {
+          Invoke-VisualStudio2022x86
+        } else {
+          Invoke-VisualStudio2022${{ matrix.variant.arch }}
+        }
 
-    - name: Python Binding Tests (msvc)
-      if: matrix.generator == 'msvc'
-      shell: pwsh
-      run: |
-        cd src/python
-        python -m pip install -r tests/requirements.txt -U
-        python -m pip install --user -U .
-        pytest -vvv ./tests
-        cd ../..
-
-    - name: Upload artifacts (ninja)
-      if: matrix.generator == 'ninja'
-      uses: actions/upload-artifact@v3
-      with:
-        name: ${{ matrix.generator }}-bin-${{ matrix.arch }}.${{ env.CMAKE_CONFIG }}
-        path: |
-          src/build/parser/parser.exe
-          src/build/parser/parser.pdb
-
-    - name: Upload artifacts (msvc)
-      if: matrix.generator == 'msvc'
-      uses: actions/upload-artifact@v3
-      with:
-        name: ${{ matrix.generator }}-bin-${{ matrix.arch }}.${{ env.CMAKE_CONFIG }}
-        path: |
-          artifact/
-
-  Linux:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        compiler: ['clang', 'gcc']
-        python-version: [3.9]
-
-    name: Ubuntu Latest / ${{ matrix.compiler }}
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v3
-
-    - name: Setup Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
-
-    - name: Install Python pre-requisites
-      shell: bash
-      run: |
-        python -m pip install --upgrade pip setuptools wheel
-        python -m pip install --user --upgrade -r src/python/requirements.txt
-
-    - name: Installing dependencies
+    - name: Environment Setup (Linux)
+      if: matrix.variant.os == 'ubuntu-latest'
       run: |
         sudo apt-get -y update
+        echo "NB_CPU=$(grep -c ^processor /proc/cpuinfo)" >> $GITHUB_ENV
+
+    - name: Environment Setup (Linux/GCC)
+      if: matrix.variant.os == 'ubuntu-latest' && matrix.variant.generator == 'gcc'
+      run: |
         sudo apt install -y g++ ninja-build
+        echo CC=gcc >> $GITHUB_ENV
+        echo CXX=g++ >> $GITHUB_ENV
+
+    - name: Environment Setup (Linux/CLang)
+      if: matrix.variant.os == 'ubuntu-latest' && matrix.variant.generator == 'clang'
+      run: |
         sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
+        echo CC=clang >> $GITHUB_ENV
+        echo CXX=clang++ >> $GITHUB_ENV
 
-    - name: Build with gcc
-      if: matrix.compiler == 'gcc'
-      env:
-        CC: gcc
-        CXX: g++
+    - name: Environment Setup (MacOS)
+      if: matrix.variant.os == 'macos-latest'
       run: |
-        cd src/build
-        chmod u+x ./build-release.sh
-        ./build-release.sh
+        echo NB_CPU=$(sysctl -n hw.ncpu) >> $GITHUB_ENV
 
-    - name: Build with clang
-      if: matrix.compiler == 'clang'
-      env:
-        CC: clang
-        CXX: clang++
+    - name: Build
       run: |
-        cd src/build
-        chmod u+x ./build-release.sh
-        ./build-release.sh
-
-    - name: Python Binding Tests
-      run: |
-        cd src/python
-        python -m pip install -r tests/requirements.txt -U
-        python -m pip install --user -U .
-        pytest -vvv ./tests
-        cd ../..
+        mkdir build
+        mkdir artifact
+        cmake -S ./src -B ./build ${{ env.CMAKE_ARCH }} ${{ env.CMAKE_FLAGS }}
+        cmake --build ./build --verbose --config ${{ matrix.variant.config }} --parallel ${{ env.NB_CPU }}
+        cmake --install ./build  --config ${{ matrix.variant.config }} --prefix ./artifact --verbose
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: bin-lin64-${{ matrix.compiler }}.Release
-        path: |
-          src/build/parser
+        name: parser-${{ matrix.variant.os }}.${{ matrix.variant.generator }}-${{ matrix.variant.arch }}.${{ matrix.variant.config }}
+        path: artifact/
 
-  OSX:
-    runs-on: macos-latest
+  bindings:
     strategy:
       fail-fast: false
-
-    name: OSX Latest / clang
+      matrix:
+        python-version: [3.9]
+        variant:
+          - {os: windows-latest, generator: msvc, arch: x64, config: RelWithDebInfo, py-arch: x64}
+          - {os: windows-latest, generator: msvc, arch: win32, config: RelWithDebInfo, py-arch: x86}
+          # - {os: windows-latest, generator: msvc, arch: arm64, config: RelWithDebInfo, py-arch: x64} # Unsupported (see https://raw.githubusercontent.com/actions/python-versions/main/versions-manifest.json)
+          - {os: ubuntu-latest, generator: gcc, arch: , config: RelWithDebInfo, py-arch: x64}
+          - {os: ubuntu-latest, generator: clang, arch: , config: RelWithDebInfo, py-arch: x64}
+          - {os: macos-latest, generator: clang, arch: , config: Release, py-arch: x64}
+    runs-on: ${{ matrix.variant.os }}
+    name: bindings / ${{ matrix.variant.os }} / ${{ matrix.variant.generator }} / ${{ matrix.variant.arch }}
+    env:
+      NB_CPU: 1
+      CMAKE_FLAGS: "-DBUILD_PARSER:BOOL=OFF -DBUILD_PYTHON_BINDING:BOOL=ON"
     steps:
     - name: Checkout
       uses: actions/checkout@v3
@@ -156,22 +100,58 @@ jobs:
     - name: Setup Python
       uses: actions/setup-python@v4
       with:
-        python-version: 3.9
+        python-version: ${{ matrix.python-version }}
+        architecture: ${{ matrix.variant.py-arch }}
 
     - name: Install Python pre-requisites
-      shell: bash
       run: |
         python -m pip install --upgrade pip setuptools wheel
         python -m pip install --user --upgrade -r src/python/requirements.txt
 
-    - name: Build with clang
-      env:
-        CC: clang
-        CXX: clang++
+    - name: Environment Setup (Windows)
+      if: matrix.variant.os == 'windows-latest'
       run: |
-        cd src/build
-        chmod u+x ./build-release-osx.sh
-        ./build-release-osx.sh
+        echo "NB_CPU=$env:NUMBER_OF_PROCESSORS" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        echo "CMAKE_ARCH='-A ${{ matrix.variant.arch }}'" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        Import-Module .\.github\Invoke-VisualStudio.ps1
+        If ("${{ matrix.variant.arch }}" -ieq "Win32") {
+          Invoke-VisualStudio2022x86
+        } else {
+          Invoke-VisualStudio2022${{ matrix.variant.arch }}
+        }
+
+    - name: Environment Setup (Linux)
+      if: matrix.variant.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get -y update
+        echo "NB_CPU=$(grep -c ^processor /proc/cpuinfo)" >> $GITHUB_ENV
+
+    - name: Environment Setup (Linux/GCC)
+      if: matrix.variant.os == 'ubuntu-latest' && matrix.variant.generator == 'gcc'
+      run: |
+        sudo apt install -y g++ ninja-build
+        echo CC=gcc >> $GITHUB_ENV
+        echo CXX=g++ >> $GITHUB_ENV
+
+    - name: Environment Setup (Linux/CLang)
+      if: matrix.variant.os == 'ubuntu-latest' && matrix.variant.generator == 'clang'
+      run: |
+        sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
+        echo CC=clang >> $GITHUB_ENV
+        echo CXX=clang++ >> $GITHUB_ENV
+
+    - name: Environment Setup (MacOS)
+      if: matrix.variant.os == 'macos-latest'
+      run: |
+        echo NB_CPU=$(sysctl -n hw.ncpu) >> $GITHUB_ENV
+
+    - name: Build
+      run: |
+        mkdir build
+        mkdir artifact
+        cmake -S ./src -B ./build ${{ env.CMAKE_ARCH }} ${{ env.CMAKE_FLAGS }}
+        cmake --build ./build --verbose --config ${{ matrix.variant.config }} --parallel ${{ env.NB_CPU }}
+        cmake --install ./build  --config ${{ matrix.variant.config }} --prefix ./artifact --verbose
 
     - name: Python Binding Tests
       run: |
@@ -184,6 +164,5 @@ jobs:
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: bin-osxx64-clang.Release
-        path: |
-          src/build/parser
+        name: python-${{ matrix.variant.os }}.${{ matrix.variant.generator }}-bin-${{ matrix.variant.arch }}.${{ matrix.variant.config }}
+        path: artifact/

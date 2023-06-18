@@ -1,3 +1,12 @@
+///
+/// This file is part of udmp-parser project
+///
+/// Released under MIT License, by 0vercl0k - 2023
+///
+/// With contribution from:
+///  * hugsy -(github.com / hugsy)
+///
+
 #include "udmp-parser.h"
 
 #include <nanobind/nanobind.h>
@@ -7,7 +16,6 @@
 #include <nanobind/stl/optional.h>
 #include <nanobind/stl/pair.h>
 #include <nanobind/stl/string.h>
-// #include <nanobind/stl/unique_ptr.h>
 #include <nanobind/stl/unordered_map.h>
 #include <nanobind/stl/unordered_set.h>
 #include <nanobind/stl/variant.h>
@@ -135,7 +143,6 @@ NB_MODULE(udmp_parser, m) {
       .def_ro("Xmm13", &udmpparser::Context64_t::Xmm13)
       .def_ro("Xmm14", &udmpparser::Context64_t::Xmm14)
       .def_ro("Xmm15", &udmpparser::Context64_t::Xmm15)
-      // .def_ro("Padding", &udmpparser::Context64_t::Padding) // Unncessary?
       .def_ro("VectorRegister", &udmpparser::Context64_t::VectorRegister)
       .def_ro("VectorControl", &udmpparser::Context64_t::VectorControl)
       .def_ro("DebugControl", &udmpparser::Context64_t::DebugControl)
@@ -219,13 +226,10 @@ NB_MODULE(udmp_parser, m) {
       .def_ro("AllocationBase", &udmpparser::dmp::MemoryInfo_t::AllocationBase)
       .def_ro("AllocationProtect",
               &udmpparser::dmp::MemoryInfo_t::AllocationProtect)
-      //   .def_ro("__alignment1", &udmpparser::dmp::MemoryInfo_t::__alignment1)
       .def_ro("RegionSize", &udmpparser::dmp::MemoryInfo_t::RegionSize)
       .def_ro("State", &udmpparser::dmp::MemoryInfo_t::State)
       .def_ro("Protect", &udmpparser::dmp::MemoryInfo_t::Protect)
       .def_ro("Type", &udmpparser::dmp::MemoryInfo_t::Type);
-  //   .def_ro("__alignment2",
-  //   &udmpparser::dmp::MemoryInfo_t::__alignment2);
 
   nb::class_<udmpparser::dmp::MemoryDescriptor_t>(m, "MemoryDescriptor")
       .def_ro("StartOfMemoryRange",
@@ -273,16 +277,12 @@ NB_MODULE(udmp_parser, m) {
               &udmpparser::dmp::ExceptionRecord_t::ExceptionAddress)
       .def_ro("NumberParameters",
               &udmpparser::dmp::ExceptionRecord_t::NumberParameters)
-      //   .def_ro("__unusedAlignment",
-      //           &udmpparser::dmp::ExceptionRecord_t::__unusedAlignment)
       .def_ro("ExceptionInformation",
               &udmpparser::dmp::ExceptionRecord_t::ExceptionInformation);
 
   nb::class_<udmpparser::dmp::ExceptionStream_t>(m, "ExceptionStream")
       .def(nb::init<>())
       .def_ro("ThreadId", &udmpparser::dmp::ExceptionStream_t::ThreadId)
-      //   .def_ro("__alignment",
-      //   &udmpparser::dmp::ExceptionStream_t::__alignment)
       .def_ro("ExceptionRecord",
               &udmpparser::dmp::ExceptionStream_t::ExceptionRecord)
       .def_ro("ThreadContext",
@@ -411,7 +411,7 @@ NB_MODULE(udmp_parser, m) {
       "ProtectionToString",
       [](const uint32_t Protection) {
         std::stringstream ss;
-        uint32_t KnownFlags{};
+        uint32_t KnownFlags = 0;
 
         if (Protection & 0x01) {
           ss << "PAGE_NOACCESS,";

@@ -1,11 +1,21 @@
+#
+# This file is part of udmp-parser project
+#
+# Released under MIT License, by 0vercl0k - 2023
+#
+# With contribution from:
+# * hugsy - (github.com/hugsy)
+#
+
 import pathlib
 import ctypes
 from ctypes import wintypes
 import time
 from typing import Optional
 
+
 def get_process_id(process_name: str):
-    kernel32 = ctypes.WinDLL('kernel32')
+    kernel32 = ctypes.WinDLL("kernel32")
     CreateToolhelp32Snapshot = kernel32.CreateToolhelp32Snapshot
     Process32First = kernel32.Process32First
     Process32Next = kernel32.Process32Next
@@ -16,16 +26,16 @@ def get_process_id(process_name: str):
 
     class PROCESSENTRY32(ctypes.Structure):
         _fields_ = [
-            ('dwSize', wintypes.DWORD),
-            ('cntUsage', wintypes.DWORD),
-            ('th32ProcessID', wintypes.DWORD),
-            ('th32DefaultHeapID', wintypes.LPVOID),
-            ('th32ModuleID', wintypes.DWORD),
-            ('cntThreads', wintypes.DWORD),
-            ('th32ParentProcessID', wintypes.DWORD),
-            ('pcPriClassBase', wintypes.LONG),
-            ('dwFlags', wintypes.DWORD),
-            ('szExeFile', wintypes.CHAR * MAX_PATH)
+            ("dwSize", wintypes.DWORD),
+            ("cntUsage", wintypes.DWORD),
+            ("th32ProcessID", wintypes.DWORD),
+            ("th32DefaultHeapID", wintypes.LPVOID),
+            ("th32ModuleID", wintypes.DWORD),
+            ("cntThreads", wintypes.DWORD),
+            ("th32ParentProcessID", wintypes.DWORD),
+            ("pcPriClassBase", wintypes.LONG),
+            ("dwFlags", wintypes.DWORD),
+            ("szExeFile", wintypes.CHAR * MAX_PATH),
         ]
 
     snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
@@ -41,7 +51,7 @@ def get_process_id(process_name: str):
 
     res = None
     while True:
-        process_name_str = pe32.szExeFile.decode('utf-8').lower()
+        process_name_str = pe32.szExeFile.decode("utf-8").lower()
         if process_name.lower() == process_name_str:
             res = pe32.th32ProcessID
             break
@@ -111,8 +121,7 @@ def generate_minidump(process_id: int, dump_file_path: pathlib.Path) -> bool:
     ]
     MiniDumpWriteDump.restype = ctypes.c_bool
 
-    hProcess = kernel32.OpenProcess(
-        PROCESS_ALL_ACCESS, False, process_id)
+    hProcess = kernel32.OpenProcess(PROCESS_ALL_ACCESS, False, process_id)
 
     if not hProcess:
         return False
@@ -129,7 +138,13 @@ def generate_minidump(process_id: int, dump_file_path: pathlib.Path) -> bool:
     )
 
     if hFile != INVALID_HANDLE_VALUE:
-        flags = MiniDumpWithFullMemory | MiniDumpWithDataSegs | MiniDumpScanMemory | MiniDumpWithHandleData | MiniDumpWithFullMemoryInfo
+        flags = (
+            MiniDumpWithFullMemory
+            | MiniDumpWithDataSegs
+            | MiniDumpScanMemory
+            | MiniDumpWithHandleData
+            | MiniDumpWithFullMemoryInfo
+        )
         bSuccess = MiniDumpWriteDump(
             hProcess,
             process_id,
@@ -146,7 +161,9 @@ def generate_minidump(process_id: int, dump_file_path: pathlib.Path) -> bool:
     return bSuccess
 
 
-def generate_minidump_from_process_name(process_name: str = "explorer.exe", output_dir: pathlib.Path = pathlib.Path(".")) -> Optional[tuple[int, pathlib.Path]]:
+def generate_minidump_from_process_name(
+    process_name: str = "explorer.exe", output_dir: pathlib.Path = pathlib.Path(".")
+) -> Optional[tuple[int, pathlib.Path]]:
     process_id = get_process_id(process_name)
     if not process_id or not isinstance(process_id, int):
         return None

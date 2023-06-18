@@ -1,4 +1,4 @@
-﻿# Axel '0vercl0k' Souchet - January 22 2022
+﻿# Axel '0vercl0k' Souchet - 2022-2023
 # Note: the cmake version must be the same as in python/pyproject.toml::tool.scikit-build:cmake.minimum-version
 cmake_minimum_required(VERSION 3.20)
 set(CMAKE_CXX_STANDARD 17)
@@ -7,7 +7,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE True)
 
 project(
     udmp-parser
-    DESCRIPTION "A Windows user minidump C++ parser library."
+    DESCRIPTION "A Cross-Platform C++ parser library for Windows user minidumps."
     HOMEPAGE_URL https://github.com/0vercl0k/udmp-parser
     VERSION 0.4
 )

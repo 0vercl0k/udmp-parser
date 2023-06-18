@@ -408,10 +408,10 @@ int main(int argc, char *argv[]) {
       // Display start / end / size / state / type of the region.
       //
 
-      const uint64_t BaseAddress = Descriptor.BaseAddress;
-      const uint64_t RegionSize = Descriptor.RegionSize;
-      const uint64_t EndAddress = BaseAddress + RegionSize;
-      printf("  %16" PRIx64 " %16" PRIx64 " %16" PRIx64 " %11s %11s",
+      const uintptr_t BaseAddress = (uintptr_t) (Descriptor.BaseAddress);
+      const uintptr_t RegionSize = (uintptr_t) (Descriptor.RegionSize);
+      const uintptr_t EndAddress = (uintptr_t) (BaseAddress + RegionSize);
+      printf("  %16" PRIXPTR " %16" PRIXPTR " %16" PRIXPTR " %11s %11s",
              BaseAddress, EndAddress, RegionSize, State, Type);
 
       //
@@ -511,7 +511,7 @@ int main(int argc, char *argv[]) {
     // dump.
     //
 
-    const uint64_t DumpAddress = *Opts.DumpAddress;
+    const uintptr_t DumpAddress = (uintptr_t)(*Opts.DumpAddress);
     const auto &Block = UserDump.GetMemBlock(DumpAddress);
 
     //
@@ -524,10 +524,10 @@ int main(int argc, char *argv[]) {
       // Display basic information about the matching memory region.
       //
 
-      const uint64_t BlockStart = Block->BaseAddress;
-      const uint64_t BlockSize = Block->DataSize;
-      const uint64_t BlockEnd = BlockStart + BlockSize;
-      printf("%016" PRIx64 " -> %016" PRIx64 "\n", BlockStart, BlockEnd);
+      const uintptr_t BlockStart = (uintptr_t)( Block->BaseAddress);
+      const uintptr_t BlockSize = (uintptr_t)( Block->DataSize);
+      const uintptr_t BlockEnd = (uintptr_t)( BlockStart + BlockSize);
+      printf("%016" PRIXPTR " -> %016" PRIXPTR "\n", BlockStart, BlockEnd);
       if (BlockSize > 0) {
 
         //
@@ -535,19 +535,19 @@ int main(int argc, char *argv[]) {
         // amount of bytes to dump.
         //
 
-        const uint64_t OffsetFromStart = DumpAddress - BlockStart;
-        const uint64_t Remaining = BlockSize - OffsetFromStart;
-        const uint64_t MaxSize = 0x100;
-        const uint64_t DumpSize = std::min(MaxSize, Remaining);
+        const uintptr_t OffsetFromStart = (uintptr_t)(DumpAddress - BlockStart);
+        const size_t Remaining = BlockSize - OffsetFromStart;
+        const size_t MaxSize = 0x100;
+        const size_t DumpSize = std::min(MaxSize, Remaining);
         utils::Hexdump(BlockStart + OffsetFromStart,
-                       &Block->Data[OffsetFromStart], size_t(DumpSize), 2);
+                       &Block->Data[OffsetFromStart], DumpSize, 2);
       } else {
-        printf("The dump does not have the content of the memory at %" PRIx64
+        printf("The dump does not have the content of the memory at %" PRIXPTR
                "\n",
                DumpAddress);
       }
     } else {
-      printf("No memory block were found for %" PRIx64 ".\n", DumpAddress);
+      printf("No memory block were found for %" PRIXPTR ".\n", DumpAddress);
     }
   }
 

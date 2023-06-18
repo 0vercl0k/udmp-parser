@@ -139,7 +139,7 @@ Minidump generated successfully: PID=3232 -> minidump-winver.exe-1687024880.dmp
 WindowsPath('minidump-winver.exe-1687024880.dmp'))
 ```
 
-Parsing a minidump object is as simple as
+Parsing a minidump object is as simple as:
 
 ```python
 >>> import udmp_parser
@@ -219,7 +219,7 @@ ntdll.ModuleName='C:\\Windows\\SysWOW64\\ntdll.dll' ntdll.BaseOfImage=0x77430000
 ntdll.ModuleName='C:\\Windows\\System32\\ntdll.dll' ntdll.BaseOfImage=0x7ffc26410000 ntdll.SizeOfImage=0x1f8000
 ```
 
-A convience function under `udmp_parser.UserDumpParser.ReadMemory()` can be used to directly read memory from the dump. The signature of the function is as `def ReadMemory(Address: int, Size: int) -> list[int]`. So to dump for instance the `wow64` module, it would go as follow:
+A convenience function under `udmp_parser.UserDumpParser.ReadMemory()` can be used to directly read memory from the dump. The signature of the function is as follow: `def ReadMemory(Address: int, Size: int) -> list[int]`. So to dump for instance the `wow64` module, it would go as follow:
 
 ```python
 >>> wow64 = [mod for addr, mod in dmp.Modules().items() if mod.ModuleName.lower() == r"c:\windows\system32\wow64.dll"][0]
@@ -242,7 +242,7 @@ Module_t(BaseOfImage=0x7ffc24a10000, SizeOfImage=0x59000, ModuleName=C:\Windows\
 
 #### Memory
 
-The memory blocks can also be enumerate in a hashmap `{address: MemoryBlock}`.
+The memory blocks can also be enumerated in a hashmap `{address: MemoryBlock}`.
 
 ```python
 >>> memory = dmp.Memory()
@@ -260,12 +260,12 @@ The memory blocks can also be enumerate in a hashmap `{address: MemoryBlock}`.
  0x7ffc26608000: [MemBlock_t(BaseAddress=0x7ffc26608000, AllocationBase=0x0, AllocationProtect=0x0, RegionSize=0x3d99e8000)]}
 ```
 
-To facilitate the parsing in a human-friendly manor, some helper functions were provided:
+To facilitate the parsing in a human-friendly manner, some helper functions are provided:
  * `udmp_parser.utils.TypeToString`: convert the region type to its meaning (from MSDN)
  * `udmp_parser.utils.StateToString`: convert the region state to its meaning (from MSDN)
  * `udmp_parser.utils.ProtectionToString`: convert the region protection to its meaning (from MSDN)
 
-This allows to search filter in a more comprehensible way:
+This allows to search and filter in a more comprehensible way:
 
 
 ```python
@@ -304,4 +304,8 @@ insn=<CsInsn 0x7ffc2658201d [4157]: push r15>
 
 # Authors
 
-* Axel [@0vercl0k](https://twitter.com/0vercl0k)' Souchet
+* Axel '[@0vercl0k](https://twitter.com/0vercl0k)' Souchet
+
+# Contributors
+
+[ ![contributors-img](https://contrib.rocks/image?repo=0vercl0k/udmp-parser) ](https://github.com/0vercl0k/udmp-parser/graphs/contributors)

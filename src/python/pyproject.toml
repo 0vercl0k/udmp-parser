@@ -5,7 +5,7 @@ build-backend = "scikit_build_core.build"
 [project]
 name = "udmp-parser"
 version = "0.4"
-description = "A Windows user minidump C++ parser library."
+description = "A Cross-Platform C++ parser library for Windows user minidumps."
 readme = "README.md"
 requires-python = ">=3.9"
 authors = [{ name = "0vercl0k", email = "0vercl0k@not-your-biz.net" }]
@@ -22,6 +22,8 @@ dependencies = []
 [project.urls]
 Homepage = "https://github.com/0vercl0k/udmp-parser"
 
+[tool.isort]
+profile = "black"
 
 [tool.scikit-build]
 minimum-version = "0.4"

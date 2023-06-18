@@ -1,3 +1,12 @@
+#
+# This file is part of udmp-parser project
+#
+# Released under MIT License, by 0vercl0k - 2023
+#
+# With contribution from:
+# * hugsy - (github.com/hugsy)
+#
+
 find_package(Python 3.9
     REQUIRED COMPONENTS Interpreter Development.Module
     OPTIONAL_COMPONENTS Development.SABIModule

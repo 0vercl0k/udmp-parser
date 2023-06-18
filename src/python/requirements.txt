@@ -1,3 +1,4 @@
 setuptools
 wheel
 nanobind
+black
