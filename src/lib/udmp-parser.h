@@ -988,6 +988,10 @@ public:
 
   const std::map<uint64_t, MemBlock_t> &GetMem() const { return Mem_; }
 
+  const MemBlock_t *GetMemBlock(const void *Address) const {
+    return GetMemBlock(uint64_t(Address));
+  }
+
   const MemBlock_t *GetMemBlock(const uint64_t Address) const {
     const auto &Res =
         std::find_if(Mem_.begin(), Mem_.end(), [&](const auto &It) {
@@ -1000,6 +1004,10 @@ public:
     }
 
     return nullptr;
+  }
+
+  const Module_t *GetModule(const void *Address) const {
+    return GetModule(uint64_t(Address));
   }
 
   const Module_t *GetModule(const uint64_t Address) const {
