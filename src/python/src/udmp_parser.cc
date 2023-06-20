@@ -360,7 +360,9 @@ NB_MODULE(udmp_parser, m) {
            "Get the minidump threads")
       .def("ForegroundThreadId",
            &udmpparser::UserDumpParser::GetForegroundThreadId)
-      .def("GetMemoryBlock", &udmpparser::UserDumpParser::GetMemBlock,
+      .def("GetMemoryBlock",
+           nb::overload_cast<const uint64_t>(
+               &udmpparser::UserDumpParser::GetMemBlock, nb::const_),
            "Access a specific MemoryBlock")
       .def("ReadMemory", &udmpparser::UserDumpParser::ReadMemory,
            "Read bytes from memory")
