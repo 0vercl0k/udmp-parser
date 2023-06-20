@@ -308,7 +308,9 @@ NB_MODULE(udmp_parser, m) {
       .def_ro("State", &udmpparser::MemBlock_t::State)
       .def_ro("Protect", &udmpparser::MemBlock_t::Protect)
       .def_ro("Type", &udmpparser::MemBlock_t::Type)
-      .def_ro("Data", &udmpparser::MemBlock_t::Data, nb::rv_policy::reference)
+      .def_prop_ro(
+          "Data",
+          [](const udmpparser::MemBlock_t &m) { return uintptr_t(m.Data); })
       .def_ro("DataSize", &udmpparser::MemBlock_t::DataSize)
       .def("__repr__", &udmpparser::MemBlock_t::to_string);
   ;
@@ -323,11 +325,13 @@ NB_MODULE(udmp_parser, m) {
       .def_ro("TimeDateStamp", &udmpparser::Module_t::TimeDateStamp)
       .def_ro("ModuleName", &udmpparser::Module_t::ModuleName)
       .def_ro("VersionInfo", &udmpparser::Module_t::VersionInfo)
-      .def_ro("CvRecord", &udmpparser::Module_t::CvRecord,
-              nb::rv_policy::reference)
+      .def_prop_ro(
+          "CvRecord",
+          [](const udmpparser::Module_t &m) { return uintptr_t(m.CvRecord); })
       .def_ro("CvRecordSize", &udmpparser::Module_t::CvRecordSize)
-      .def_ro("MiscRecord", &udmpparser::Module_t::MiscRecord,
-              nb::rv_policy::reference)
+      .def_prop_ro(
+          "MiscRecord",
+          [](const udmpparser::Module_t &m) { return uintptr_t(m.MiscRecord); })
       .def_ro("MiscRecordSize", &udmpparser::Module_t::MiscRecordSize)
       .def("__repr__", &udmpparser::Module_t::to_string);
 
@@ -348,8 +352,8 @@ NB_MODULE(udmp_parser, m) {
       .def(nb::init<>())
       .def("Parse", &udmpparser::UserDumpParser::Parse,
            "Parse the minidump given in argument.")
-      .def("Modules", &udmpparser::UserDumpParser::GetModules, nb::rv_policy::reference,
-           "Get the minidump modules")
+      .def("Modules", &udmpparser::UserDumpParser::GetModules,
+           nb::rv_policy::reference, "Get the minidump modules")
       .def("Memory", &udmpparser::UserDumpParser::GetMem,
            nb::rv_policy::reference)
       .def("Threads", &udmpparser::UserDumpParser::GetThreads,
@@ -365,8 +369,7 @@ NB_MODULE(udmp_parser, m) {
   nb::class_<udmpparser::Version>(m, "version")
       .def_ro_static("major", &udmpparser::Version::Major)
       .def_ro_static("minor", &udmpparser::Version::Minor)
-      .def_ro_static("release", &udmpparser::Version::Release)
-      ;
+      .def_ro_static("release", &udmpparser::Version::Release);
 
   auto utils = m.def_submodule("utils", "Helper functions");
   utils.def(
@@ -417,46 +420,57 @@ NB_MODULE(udmp_parser, m) {
           ss << "PAGE_NOACCESS,";
           KnownFlags |= 0x01;
         }
+
         if (Protection & 0x02) {
           ss << "PAGE_READONLY,";
           KnownFlags |= 0x02;
         }
+
         if (Protection & 0x04) {
           ss << "PAGE_READWRITE,";
           KnownFlags |= 0x04;
         }
+
         if (Protection & 0x08) {
           ss << "PAGE_WRITECOPY,";
           KnownFlags |= 0x08;
         }
+
         if (Protection & 0x10) {
           ss << "PAGE_EXECUTE,";
           KnownFlags |= 0x10;
         }
+
         if (Protection & 0x20) {
           ss << "PAGE_EXECUTE_READ,";
           KnownFlags |= 0x20;
         }
+
         if (Protection & 0x40) {
           ss << "PAGE_EXECUTE_READWRITE,";
           KnownFlags |= 0x40;
         }
+
         if (Protection & 0x80) {
           ss << "PAGE_EXECUTE_WRITECOPY,";
           KnownFlags |= 0x80;
         }
+
         if (Protection & 0x100) {
           ss << "PAGE_GUARD,";
           KnownFlags |= 0x100;
         }
+
         if (Protection & 0x200) {
           ss << "PAGE_NOCACHE,";
           KnownFlags |= 0x200;
         }
+
         if (Protection & 0x400) {
           ss << "PAGE_WRITECOMBINE,";
           KnownFlags |= 0x400;
         }
+
         if (Protection & 0x4000'0000) {
           ss << "PAGE_TARGETS_INVALID,";
           KnownFlags |= 0x4000'0000;
