@@ -413,67 +413,33 @@ NB_MODULE(udmp_parser, m) {
   utils.def(
       "ProtectionToString",
       [](const uint32_t Protection) {
+        struct {
+          const char *Name = nullptr;
+          uint32_t Mask = 0;
+        } Flags[] = {
+            {"PAGE_NOACCESS", 0x01},
+            {"PAGE_READONLY", 0x02},
+            {"PAGE_READWRITE", 0x04},
+            {"PAGE_WRITECOPY", 0x08},
+            {"PAGE_EXECUTE", 0x10},
+            {"PAGE_EXECUTE_READ", 0x20},
+            {"PAGE_EXECUTE_READWRITE", 0x40},
+            {"PAGE_EXECUTE_WRITECOPY", 0x80},
+            {"PAGE_GUARD", 0x100},
+            {"PAGE_NOCACHE", 0x200},
+            {"PAGE_WRITECOMBINE", 0x400},
+            {"PAGE_TARGETS_INVALID", 0x4000'0000},
+        };
         std::stringstream ss;
         uint32_t KnownFlags = 0;
 
-        if (Protection & 0x01) {
-          ss << "PAGE_NOACCESS,";
-          KnownFlags |= 0x01;
-        }
+        for (const auto &Flag : Flags) {
+          if ((Protection & Flag.Mask) == 0) {
+            continue;
+          }
 
-        if (Protection & 0x02) {
-          ss << "PAGE_READONLY,";
-          KnownFlags |= 0x02;
-        }
-
-        if (Protection & 0x04) {
-          ss << "PAGE_READWRITE,";
-          KnownFlags |= 0x04;
-        }
-
-        if (Protection & 0x08) {
-          ss << "PAGE_WRITECOPY,";
-          KnownFlags |= 0x08;
-        }
-
-        if (Protection & 0x10) {
-          ss << "PAGE_EXECUTE,";
-          KnownFlags |= 0x10;
-        }
-
-        if (Protection & 0x20) {
-          ss << "PAGE_EXECUTE_READ,";
-          KnownFlags |= 0x20;
-        }
-
-        if (Protection & 0x40) {
-          ss << "PAGE_EXECUTE_READWRITE,";
-          KnownFlags |= 0x40;
-        }
-
-        if (Protection & 0x80) {
-          ss << "PAGE_EXECUTE_WRITECOPY,";
-          KnownFlags |= 0x80;
-        }
-
-        if (Protection & 0x100) {
-          ss << "PAGE_GUARD,";
-          KnownFlags |= 0x100;
-        }
-
-        if (Protection & 0x200) {
-          ss << "PAGE_NOCACHE,";
-          KnownFlags |= 0x200;
-        }
-
-        if (Protection & 0x400) {
-          ss << "PAGE_WRITECOMBINE,";
-          KnownFlags |= 0x400;
-        }
-
-        if (Protection & 0x4000'0000) {
-          ss << "PAGE_TARGETS_INVALID,";
-          KnownFlags |= 0x4000'0000;
+          ss << Flag.Name << ",";
+          KnownFlags |= Flag.Mask;
         }
 
         const uint32_t MissingFlags = (~KnownFlags) & Protection;
@@ -487,6 +453,7 @@ NB_MODULE(udmp_parser, m) {
           ProtectionString =
               ProtectionString.substr(0, ProtectionString.size() - 1);
         }
+
         return ProtectionString;
       },
       "Get a string representation of the memory state.");
