@@ -10,7 +10,6 @@
 #include <exception>
 #include <filesystem>
 #include <map>
-#include <memory>
 #include <optional>
 #include <sstream>
 #include <string>
@@ -687,7 +686,7 @@ struct MemBlock_t {
   uint32_t State = 0;
   uint32_t Protect = 0;
   uint32_t Type = 0;
-  std::unique_ptr<uint8_t[]> Data{};
+  const uint8_t *Data = nullptr;
   uint64_t DataSize = 0;
 
   MemBlock_t(const dmp::MemoryInfo_t &Info_)
@@ -706,13 +705,6 @@ struct MemBlock_t {
     ss << ")]";
     return ss.str();
   }
-
-  void SetData(const uint8_t *Data_, const size_t DataSize_) {
-    auto Temp = std::make_unique<uint8_t[]>(DataSize_);
-    std::memcpy(Temp.get(), Data_, DataSize_);
-    Data.swap(Temp);
-    DataSize = DataSize_;
-  }
 };
 
 struct Module_t {
@@ -722,26 +714,18 @@ struct Module_t {
   uint32_t TimeDateStamp = 0;
   std::string ModuleName;
   dmp::FixedFileInfo_t VersionInfo;
-  std::unique_ptr<uint8_t[]> CvRecord;
+  const void *CvRecord = nullptr;
   uint32_t CvRecordSize = 0;
-  std::unique_ptr<uint8_t[]> MiscRecord;
+  const void *MiscRecord = nullptr;
   uint32_t MiscRecordSize = 0;
 
   Module_t(const dmp::ModuleEntry_t &M, const std::string &Name,
            const void *CvRecord_, const void *MiscRecord_)
       : BaseOfImage(M.BaseOfImage), SizeOfImage(M.SizeOfImage),
         CheckSum(M.CheckSum), TimeDateStamp(M.TimeDateStamp), ModuleName(Name),
-        VersionInfo(M.VersionInfo), CvRecordSize(M.CvRecord.DataSize),
-        MiscRecordSize(M.MiscRecord.DataSize) {
-    //
-    // Take ownership of `CvRecord` and `MiscRecord`
-    //
-    CvRecord = std::make_unique<uint8_t[]>(CvRecordSize);
-    std::memcpy(CvRecord.get(), CvRecord_, CvRecordSize);
-
-    MiscRecord = std::make_unique<uint8_t[]>(MiscRecordSize);
-    std::memcpy(MiscRecord.get(), MiscRecord_, MiscRecordSize);
-  }
+        VersionInfo(M.VersionInfo), CvRecord(CvRecord_),
+        CvRecordSize(M.CvRecord.DataSize), MiscRecord(MiscRecord_),
+        MiscRecordSize(M.MiscRecord.DataSize) {}
 
   std::string to_string() const {
     std::stringstream ss;
@@ -1071,7 +1055,7 @@ public:
     const auto RemainingSize = size_t(Block->DataSize - OffsetFromStart);
     const auto DumpSize = std::min(RemainingSize, Size);
     std::vector<uint8_t> Out(DumpSize);
-    std::memcpy(Out.data(), Block->Data.get() + OffsetFromStart, DumpSize);
+    std::memcpy(Out.data(), Block->Data + OffsetFromStart, DumpSize);
     return Out;
   }
 
@@ -1479,7 +1463,9 @@ private:
       //
       // Update the entry.
       //
-      It->second.SetData(CurrentData, DataSize);
+
+      It->second.Data = CurrentData;
+      It->second.DataSize = DataSize;
       CurrentData += DataSize;
     }
 
