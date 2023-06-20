@@ -7,7 +7,7 @@
 # * hugsy - (github.com/hugsy)
 #
 
-find_package(Python 3.9
+find_package(Python 3
     REQUIRED COMPONENTS Interpreter Development.Module
     OPTIONAL_COMPONENTS Development.SABIModule
 )
@@ -32,7 +32,6 @@ if(BUILD_PYTHON_PACKAGE)
     #
     target_include_directories(udmp_parser PRIVATE ../lib)
     install(TARGETS udmp_parser LIBRARY DESTINATION .)
-
 else()
     #
     # This is the general case, when built from the root cmakefile

@@ -709,7 +709,7 @@ struct MemBlock_t {
 
   void SetData(const uint8_t *Data_, const size_t DataSize_) {
     auto Temp = std::make_unique<uint8_t[]>(DataSize_);
-    ::memcpy(Temp.get(), Data_, DataSize_);
+    std::memcpy(Temp.get(), Data_, DataSize_);
     Data.swap(Temp);
     DataSize = DataSize_;
   }
@@ -737,10 +737,10 @@ struct Module_t {
     // Take ownership of `CvRecord` and `MiscRecord`
     //
     CvRecord = std::make_unique<uint8_t[]>(CvRecordSize);
-    ::memcpy(CvRecord.get(), CvRecord_, CvRecordSize);
+    std::memcpy(CvRecord.get(), CvRecord_, CvRecordSize);
 
     MiscRecord = std::make_unique<uint8_t[]>(MiscRecordSize);
-    ::memcpy(MiscRecord.get(), MiscRecord_, MiscRecordSize);
+    std::memcpy(MiscRecord.get(), MiscRecord_, MiscRecordSize);
   }
 
   std::string to_string() const {
@@ -1004,7 +1004,7 @@ public:
 
   const std::map<uint64_t, MemBlock_t> &GetMem() const { return Mem_; }
 
-  const MemBlock_t *GetMemBlock(const uintptr_t Address) const {
+  const MemBlock_t *GetMemBlock(const uint64_t Address) const {
     const auto &Res =
         std::find_if(Mem_.begin(), Mem_.end(), [&](const auto &It) {
           return Address >= It.first &&
@@ -1018,7 +1018,7 @@ public:
     return nullptr;
   }
 
-  const Module_t *GetModule(const uintptr_t Address) const {
+  const Module_t *GetModule(const uint64_t Address) const {
 
     //
     // Look for a module that includes this address.
@@ -1060,19 +1060,18 @@ public:
     return ss.str();
   }
 
-  std::vector<uint8_t> ReadMemory(const uintptr_t Address, const size_t Size) const {
-    auto const Block = GetMemBlock(Address);
+  std::vector<uint8_t> ReadMemory(const uint64_t Address,
+                                  const size_t Size) const {
+    const auto &Block = GetMemBlock(Address);
     if (!Block) {
       throw ParsingError("Invalid address");
     }
 
-    const uintptr_t OffsetFromStart = Address - (uintptr_t)Block->BaseAddress;
-    const size_t RemainingSize =
-        static_cast<size_t>(Block->DataSize) - static_cast<size_t>(OffsetFromStart);
-    const size_t DumpSize = std::min(RemainingSize, Size);
+    const auto OffsetFromStart = Address - Block->BaseAddress;
+    const auto RemainingSize = size_t(Block->DataSize - OffsetFromStart);
+    const auto DumpSize = std::min(RemainingSize, Size);
     std::vector<uint8_t> Out(DumpSize);
-    ::memcpy(Out.data(), (void *)(Block->Data.get() + OffsetFromStart),
-             DumpSize);
+    std::memcpy(Out.data(), Block->Data.get() + OffsetFromStart, DumpSize);
     return Out;
   }
 
