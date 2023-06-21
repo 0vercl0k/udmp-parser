@@ -7,13 +7,12 @@ name = "udmp-parser"
 version = "0.4"
 description = "A Cross-Platform C++ parser library for Windows user minidumps."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.2"
 authors = [{ name = "0vercl0k", email = "0vercl0k@not-your-biz.net" }]
 classifiers = [
     "Development Status :: 4 - Beta",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Topic :: Software Development :: Assemblers",
     "Natural Language :: English",
 ]
@@ -28,11 +27,8 @@ profile = "black"
 [tool.scikit-build]
 minimum-version = "0.4"
 build-dir = "build/{wheel_tag}"
-wheel.py-api = "cp39"
 cmake.minimum-version = "3.20"
 cmake.args = [
-    "-DBUILD_PARSER:BOOL=OFF",
-    "-DBUILD_PYTHON_BINDING:BOOL=OFF",
     "-DBUILD_PYTHON_PACKAGE:BOOL=ON",
 ]
 
