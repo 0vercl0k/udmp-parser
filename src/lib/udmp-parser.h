@@ -242,8 +242,8 @@ static_assert(sizeof(Context64_t) == 0x4d0);
 namespace dmp {
 
 struct Header_t {
-  static const uint32_t ExpectedSignature = 0x50'4d'44'4d; // 'PMDM';
-  static const uint32_t ValidFlagsMask = 0x00'1f'ff'ff;
+  static inline const uint32_t ExpectedSignature = 0x50'4d'44'4d; // 'PMDM';
+  static inline const uint32_t ValidFlagsMask = 0x00'1f'ff'ff;
   uint32_t Signature;
   uint16_t Version;
   uint16_t ImplementationVersion;
