@@ -88,8 +88,8 @@ private:
 #pragma pack(1)
 
 struct Version {
-  static const uint16_t Major = 0;
-  static const uint16_t Minor = 4;
+  static inline const uint16_t Major = 0;
+  static inline const uint16_t Minor = 4;
   static inline const std::string Release = "";
 };
 
