@@ -90,7 +90,7 @@ private:
 struct Version {
   static const uint16_t Major = 0;
   static const uint16_t Minor = 4;
-  static const std::string Release = "";
+  static inline const std::string Release = "";
 };
 
 enum class ProcessorArch_t : uint16_t {
