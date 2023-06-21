@@ -1,2 +1,2 @@
-cmake .. %ARCH% -GNinja
+cmake .. -GNinja
 cmake --build . --config RelWithDebInfo
