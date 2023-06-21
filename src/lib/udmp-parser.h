@@ -1,17 +1,22 @@
 // Axel '0vercl0k' Souchet - January 22 2022
 #pragma once
 #include <algorithm>
+#include <array>
 #include <cinttypes>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <exception>
+#include <filesystem>
 #include <map>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <variant>
 #include <vector>
-#include <cstdlib>
+
+namespace fs = std::filesystem;
 
 #if defined(__i386__) || defined(_M_IX86)
 #define ARCH_X86
@@ -68,8 +73,25 @@
 #endif // _WIN32
 
 namespace udmpparser {
+
+class ParsingError : public std::exception {
+public:
+  explicit ParsingError(const std::string &message) : message_(message) {}
+
+  const char *what() const noexcept override { return message_.c_str(); }
+
+private:
+  std::string message_;
+};
+
 #pragma pack(push)
 #pragma pack(1)
+
+struct Version {
+  static inline const uint16_t Major = 0;
+  static inline const uint16_t Minor = 4;
+  static inline const std::string Release = "";
+};
 
 enum class ProcessorArch_t : uint16_t {
   X86 = 0,
@@ -89,7 +111,7 @@ struct FloatingSaveArea32_t {
   uint32_t ErrorSelector;
   uint32_t DataOffset;
   uint32_t DataSelector;
-  uint8_t RegisterArea[kWOW64_SIZE_OF_80387_REGISTERS];
+  std::array<uint8_t, kWOW64_SIZE_OF_80387_REGISTERS> RegisterArea;
   uint32_t Cr0NpxState;
 };
 
@@ -122,7 +144,7 @@ struct Context32_t {
   uint32_t EFlags;
   uint32_t Esp;
   uint32_t SegSs;
-  uint8_t ExtendedRegisters[kWOW64_MAXIMUM_SUPPORTED_EXTENSION];
+  std::array<uint8_t, kWOW64_MAXIMUM_SUPPORTED_EXTENSION> ExtendedRegisters;
 };
 
 static_assert(sizeof(Context32_t) == 0x2cc);
@@ -186,7 +208,7 @@ struct Context64_t {
   uint16_t Reserved3;
   uint32_t MxCsr2;
   uint32_t MxCsr_Mask;
-  uint128_t FloatRegisters[8];
+  std::array<uint128_t, 8> FloatRegisters;
   uint128_t Xmm0;
   uint128_t Xmm1;
   uint128_t Xmm2;
@@ -204,7 +226,7 @@ struct Context64_t {
   uint128_t Xmm14;
   uint128_t Xmm15;
   uint8_t Padding[0x60];
-  uint128_t VectorRegister[26];
+  std::array<uint128_t, 26> VectorRegister;
   uint64_t VectorControl;
   uint64_t DebugControl;
   uint64_t LastBranchToRip;
@@ -220,8 +242,8 @@ static_assert(sizeof(Context64_t) == 0x4d0);
 namespace dmp {
 
 struct Header_t {
-  static const uint32_t ExpectedSignature = 0x50'4d'44'4d; // 'PMDM';
-  static const uint32_t ValidFlagsMask = 0x00'1f'ff'ff;
+  static inline const uint32_t ExpectedSignature = 0x50'4d'44'4d; // 'PMDM';
+  static inline const uint32_t ValidFlagsMask = 0x00'1f'ff'ff;
   uint32_t Signature;
   uint16_t Version;
   uint16_t ImplementationVersion;
@@ -401,7 +423,7 @@ struct ExceptionRecord_t {
   uint64_t ExceptionAddress;
   uint32_t NumberParameters;
   uint32_t __unusedAlignment;
-  uint64_t ExceptionInformation[kEXCEPTION_MAXIMUM_PARAMETERS];
+  std::array<uint64_t, kEXCEPTION_MAXIMUM_PARAMETERS> ExceptionInformation;
 };
 
 static_assert(sizeof(ExceptionRecord_t) == 0x98);
@@ -673,6 +695,17 @@ struct MemBlock_t {
         AllocationProtect(Info_.AllocationProtect),
         RegionSize(Info_.RegionSize), State(Info_.State),
         Protect(Info_.Protect), Type(Info_.Type){};
+
+  std::string to_string() const {
+    std::stringstream ss;
+    ss << "[MemBlock_t(";
+    ss << "BaseAddress=0x" << std::hex << BaseAddress;
+    ss << ", AllocationBase=0x" << AllocationBase;
+    ss << ", AllocationProtect=0x" << AllocationProtect;
+    ss << ", RegionSize=0x" << RegionSize;
+    ss << ")]";
+    return ss.str();
+  }
 };
 
 struct Module_t {
@@ -694,6 +727,16 @@ struct Module_t {
         VersionInfo(M.VersionInfo), CvRecord(CvRecord_),
         CvRecordSize(M.CvRecord.DataSize), MiscRecord(MiscRecord_),
         MiscRecordSize(M.MiscRecord.DataSize) {}
+
+  std::string to_string() const {
+    std::stringstream ss;
+    ss << "Module_t(";
+    ss << "BaseOfImage=0x" << std::hex << BaseOfImage;
+    ss << ", SizeOfImage=0x" << SizeOfImage;
+    ss << ", ModuleName=" << ModuleName;
+    ss << ")";
+    return ss.str();
+  }
 };
 
 class UnknownContext_t {};
@@ -718,6 +761,16 @@ struct Thread_t {
     } else if (*Arch_ == ProcessorArch_t::AMD64) {
       Context = *(Context64_t *)Context_;
     }
+  }
+
+  std::string to_string() const {
+    std::stringstream ss;
+    ss << "Thread(";
+    ss << "Id=0x" << std::hex << ThreadId << ", ";
+    ss << "SuspendCount=0x" << std::hex << SuspendCount << ", ";
+    ss << "Teb=0x" << std::hex << Teb;
+    ss << ")";
+    return ss.str();
   }
 };
 
@@ -769,6 +822,10 @@ public:
     //
     // Map a view of the file.
     //
+    if (!std::filesystem::exists(PathFile)) {
+      printf("The dump file specified does not exist.\n");
+      return false;
+    }
 
     if (!FileMap_.MapFile(PathFile)) {
       printf("MapFile failed.\n");
@@ -930,7 +987,11 @@ public:
     return true;
   }
 
-  const std::map<uint64_t, MemBlock_t> GetMem() const { return Mem_; }
+  bool Parse(const fs::path &PathFile) {
+    return Parse(PathFile.string().c_str());
+  }
+
+  const std::map<uint64_t, MemBlock_t> &GetMem() const { return Mem_; }
 
   const MemBlock_t *GetMemBlock(const void *Address) const {
     return GetMemBlock(uint64_t(Address));
@@ -985,6 +1046,30 @@ public:
 
   std::optional<uint32_t> GetForegroundThreadId() const {
     return ForegroundThreadId_;
+  }
+
+  std::string to_string() const {
+    std::stringstream ss;
+    ss << "UserDumpParser(";
+    ss << "ModuleNb=" << Modules_.size();
+    ss << ", ThreadNb=" << Threads_.size();
+    ss << ")";
+    return ss.str();
+  }
+
+  std::vector<uint8_t> ReadMemory(const uint64_t Address,
+                                  const size_t Size) const {
+    const auto &Block = GetMemBlock(Address);
+    if (!Block) {
+      throw ParsingError("Invalid address");
+    }
+
+    const auto OffsetFromStart = Address - Block->BaseAddress;
+    const auto RemainingSize = size_t(Block->DataSize - OffsetFromStart);
+    const auto DumpSize = std::min(RemainingSize, Size);
+    std::vector<uint8_t> Out(DumpSize);
+    std::memcpy(Out.data(), Block->Data + OffsetFromStart, DumpSize);
+    return Out;
   }
 
 private:
@@ -1380,7 +1465,7 @@ private:
       // If we don't find an existing entry, there is something funky going on.
       //
 
-      const auto &It = Mem_.find(StartOfMemoryRange);
+      auto const &It = Mem_.find(StartOfMemoryRange);
       if (It == Mem_.end()) {
         printf("The memory region starting at %" PRIx64
                " does not exist in the map.\n",
