@@ -11,7 +11,7 @@ import pathlib
 import ctypes
 from ctypes import wintypes
 import time
-from typing import Optional
+from typing import Optional, Tuple
 
 
 def get_process_id(process_name: str):
@@ -163,7 +163,7 @@ def generate_minidump(process_id: int, dump_file_path: pathlib.Path) -> bool:
 
 def generate_minidump_from_process_name(
     process_name: str = "explorer.exe", output_dir: pathlib.Path = pathlib.Path(".")
-) -> Optional[tuple[int, pathlib.Path]]:
+) -> Optional[Tuple[int, pathlib.Path]]:
     process_id = get_process_id(process_name)
     if not process_id or not isinstance(process_id, int):
         return None

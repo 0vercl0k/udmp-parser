@@ -19,7 +19,6 @@ import unittest
 # format: on
 import udmp_parser  # type: ignore
 from .utils import generate_minidump_from_process_name  # type: ignore
-
 # format: off
 
 TARGET_PROCESS_NAME: str = "winver.exe"
