@@ -5,7 +5,6 @@
 #include <cinttypes>
 #include <cstdint>
 #include <cstdio>
-#include <cstdlib>
 #include <cstring>
 #include <exception>
 #include <filesystem>
@@ -16,6 +15,8 @@
 #include <unordered_map>
 #include <variant>
 #include <vector>
+
+namespace fs = std::filesystem;
 
 #if defined(__i386__) || defined(_M_IX86)
 #define ARCH_X86
@@ -816,7 +817,7 @@ public:
   // Parse the file.
   //
 
-  bool Parse(std::filesystem::path const &PathFile) {
+  bool Parse(const char *PathFile) {
 
     //
     // Map a view of the file.
@@ -826,7 +827,7 @@ public:
       return false;
     }
 
-    if (!FileMap_.MapFile(PathFile.string().c_str())) {
+    if (!FileMap_.MapFile(PathFile)) {
       printf("MapFile failed.\n");
       return false;
     }
@@ -984,6 +985,10 @@ public:
     }
 
     return true;
+  }
+
+  bool Parse(const fs::path &PathFile) {
+    return Parse(PathFile.string().c_str());
   }
 
   const std::map<uint64_t, MemBlock_t> &GetMem() const { return Mem_; }

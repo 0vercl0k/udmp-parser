@@ -1,11 +1,11 @@
-///
-/// This file is part of udmp-parser project
-///
-/// Released under MIT License, by 0vercl0k - 2023
-///
-/// With contribution from:
-///  * hugsy -(github.com / hugsy)
-///
+//
+// This file is part of udmp-parser project
+//
+// Released under MIT License, by 0vercl0k - 2023
+//
+// With contribution from:
+//  * hugsy -(github.com / hugsy)
+//
 
 #include "udmp-parser.h"
 
@@ -350,7 +350,9 @@ NB_MODULE(udmp_parser, m) {
 
   nb::class_<udmpparser::UserDumpParser>(m, "UserDumpParser")
       .def(nb::init<>())
-      .def("Parse", &udmpparser::UserDumpParser::Parse,
+      .def("Parse",
+           nb::overload_cast<const fs::path &>(
+               &udmpparser::UserDumpParser::Parse),
            "Parse the minidump given in argument.")
       .def("Modules", &udmpparser::UserDumpParser::GetModules,
            nb::rv_policy::reference, "Get the minidump modules")
@@ -410,7 +412,7 @@ NB_MODULE(udmp_parser, m) {
         }
         return "";
       },
-      "Get a string representation of the memory state.");
+      "Get a string representation of the memory state");
 
   utils.def(
       "ProtectionToString",
@@ -458,5 +460,5 @@ NB_MODULE(udmp_parser, m) {
 
         return ProtectionString;
       },
-      "Get a string representation of the memory state.");
+      "Get a string representation of the memory protection");
 }

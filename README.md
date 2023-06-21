@@ -192,18 +192,18 @@ Get a hashmap of modules (as `{address: ModuleObject}`), access their informatio
 ```python
 >>> modules = dmp.Modules()
 >>> modules
-{0x180000: Module_t(BaseOfImage=0x180000, SizeOfImage=0x3000, ModuleName=C:\Windows\SysWOW64\sfc.dll),
- 0xa50000: Module_t(BaseOfImage=0xa50000, SizeOfImage=0x14000, ModuleName=C:\Windows\SysWOW64\rundll32.exe),
- 0x72fb0000: Module_t(BaseOfImage=0x72fb0000, SizeOfImage=0x11000, ModuleName=C:\Windows\SysWOW64\wkscli.dll),
- 0x72fd0000: Module_t(BaseOfImage=0x72fd0000, SizeOfImage=0x52000, ModuleName=C:\Windows\SysWOW64\mswsock.dll),
- 0x73030000: Module_t(BaseOfImage=0x73030000, SizeOfImage=0xf000, ModuleName=C:\Windows\SysWOW64\browcli.dll),
- 0x73040000: Module_t(BaseOfImage=0x73040000, SizeOfImage=0xa000, ModuleName=C:\Windows\SysWOW64\davhlpr.dll),
- 0x73050000: Module_t(BaseOfImage=0x73050000, SizeOfImage=0x19000, ModuleName=C:\Windows\SysWOW64\davclnt.dll),
- 0x73070000: Module_t(BaseOfImage=0x73070000, SizeOfImage=0x18000, ModuleName=C:\Windows\SysWOW64\ntlanman.dll),
+{1572864: Module_t(BaseOfImage=0x180000, SizeOfImage=0x3000, ModuleName=C:\Windows\SysWOW64\sfc.dll),
+ 10813440: Module_t(BaseOfImage=0xa50000, SizeOfImage=0x14000, ModuleName=C:\Windows\SysWOW64\rundll32.exe),
+ 1929052160: Module_t(BaseOfImage=0x72fb0000, SizeOfImage=0x11000, ModuleName=C:\Windows\SysWOW64\wkscli.dll),
+ 1929183232: Module_t(BaseOfImage=0x72fd0000, SizeOfImage=0x52000, ModuleName=C:\Windows\SysWOW64\mswsock.dll),
+ 1929576448: Module_t(BaseOfImage=0x73030000, SizeOfImage=0xf000, ModuleName=C:\Windows\SysWOW64\browcli.dll),
+ 1929641984: Module_t(BaseOfImage=0x73040000, SizeOfImage=0xa000, ModuleName=C:\Windows\SysWOW64\davhlpr.dll),
+ 1929707520: Module_t(BaseOfImage=0x73050000, SizeOfImage=0x19000, ModuleName=C:\Windows\SysWOW64\davclnt.dll),
+ 1929838592: Module_t(BaseOfImage=0x73070000, SizeOfImage=0x18000, ModuleName=C:\Windows\SysWOW64\ntlanman.dll),
  [...]
- 0x7ffc24980000: Module_t(BaseOfImage=0x7ffc24980000, SizeOfImage=0x83000, ModuleName=C:\Windows\System32\wow64win.dll),
- 0x7ffc24a10000: Module_t(BaseOfImage=0x7ffc24a10000, SizeOfImage=0x59000, ModuleName=C:\Windows\System32\wow64.dll),
- 0x7ffc26410000: Module_t(BaseOfImage=0x7ffc26410000, SizeOfImage=0x1f8000, ModuleName=C:\Windows\System32\ntdll.dll)}
+ 140720922427392: Module_t(BaseOfImage=0x7ffc24980000, SizeOfImage=0x83000, ModuleName=C:\Windows\System32\wow64win.dll),
+ 140720923017216: Module_t(BaseOfImage=0x7ffc24a10000, SizeOfImage=0x59000, ModuleName=C:\Windows\System32\wow64.dll),
+ 140720950280192: Module_t(BaseOfImage=0x7ffc26410000, SizeOfImage=0x1f8000, ModuleName=C:\Windows\System32\ntdll.dll)}
 ```
 
 Access directly module info:

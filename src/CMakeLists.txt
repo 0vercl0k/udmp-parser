@@ -1,4 +1,4 @@
-﻿# Axel '0vercl0k' Souchet - 2022-2023
+﻿# Axel '0vercl0k' Souchet - January 22 2022
 # Note: the cmake version must be the same as in python/pyproject.toml::tool.scikit-build:cmake.minimum-version
 cmake_minimum_required(VERSION 3.20)
 set(CMAKE_CXX_STANDARD 17)

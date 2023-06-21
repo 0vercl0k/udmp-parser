@@ -75,11 +75,11 @@ class TestParserBasic(unittest.TestCase):
         assert len(threads)
 
         for _, thread in threads.items():
-            assert thread.ThreadId, f"invalid ThreadId field"
-            assert thread.Teb, f"invalid Teb field"
+            assert thread.ThreadId, "invalid ThreadId field"
+            assert thread.Teb, "invalid Teb field"
             assert not isinstance(
                 thread.Context, udmp_parser.UnknownContext
-            ), f"invalid Context field"
+            ), "invalid Context field"
             if isinstance(thread.Context, udmp_parser.Context32):
                 assert thread.Context.Esp
                 assert thread.Context.Eip
@@ -87,7 +87,7 @@ class TestParserBasic(unittest.TestCase):
                 assert thread.Context.Rsp
                 assert thread.Context.Rip
             else:
-                assert False, f"invalid Context field"
+                assert False, "invalid Context field"
 
     def test_modules(self):
         parser = udmp_parser.UserDumpParser()
