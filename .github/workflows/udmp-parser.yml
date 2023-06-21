@@ -31,11 +31,7 @@ jobs:
         echo "NB_CPU=$env:NUMBER_OF_PROCESSORS" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         echo "CMAKE_ARCH='-A ${{ matrix.variant.arch }}'" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         Import-Module .\.github\Invoke-VisualStudio.ps1
-        If ("${{ matrix.variant.arch }}" -ieq "Win32") {
-          Invoke-VisualStudio2022x86
-        } else {
-          Invoke-VisualStudio2022${{ matrix.variant.arch }}
-        }
+        Invoke-VisualStudio2022${{ matrix.variant.arch }}
 
     - name: Environment Setup (Linux)
       if: matrix.variant.os == 'ubuntu-latest'
@@ -114,11 +110,7 @@ jobs:
         echo "NB_CPU=$env:NUMBER_OF_PROCESSORS" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         echo "CMAKE_ARCH='-A ${{ matrix.variant.arch }}'" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         Import-Module .\.github\Invoke-VisualStudio.ps1
-        If ("${{ matrix.variant.arch }}" -ieq "Win32") {
-          Invoke-VisualStudio2022x86
-        } else {
-          Invoke-VisualStudio2022${{ matrix.variant.arch }}
-        }
+        Invoke-VisualStudio2022${{ matrix.variant.arch }}
 
     - name: Environment Setup (Linux)
       if: matrix.variant.os == 'ubuntu-latest'
