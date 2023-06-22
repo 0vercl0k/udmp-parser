@@ -153,6 +153,12 @@ jobs:
         pytest -vvv ./tests
         cd ../..
 
+    - name: Build wheel
+      run: |
+        cd src/python
+        python -m pip wheel -w ../../artifact .
+        cd ../..
+
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
       with:
