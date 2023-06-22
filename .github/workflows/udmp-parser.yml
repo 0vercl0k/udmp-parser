@@ -162,5 +162,5 @@ jobs:
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: python-${{ matrix.variant.os }}.${{ matrix.variant.generator }}-bin-${{ matrix.variant.arch }}.${{ matrix.variant.config }}
+        name: python-${{ matrix.variant.os }}.${{ matrix.variant.generator }}-${{ matrix.variant.arch }}.${{ matrix.variant.config }}
         path: artifact/
