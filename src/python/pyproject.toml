@@ -25,6 +25,7 @@ Homepage = "https://github.com/0vercl0k/udmp-parser"
 profile = "black"
 
 [tool.scikit-build]
+wheel.py-api = "cp32"
 minimum-version = "0.4"
 build-dir = "build/{wheel_tag}"
 cmake.minimum-version = "3.20"

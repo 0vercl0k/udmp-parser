@@ -157,6 +157,7 @@ Feature-wise, here are some examples of usage:
 Get a hashmap of threads (as `{TID: ThreadObject}`), access their information:
 
 ```python
+>>> threads = dmp.Threads()
 >>> len(threads)
 14
 >>> threads
