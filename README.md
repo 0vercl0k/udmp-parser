@@ -39,7 +39,6 @@ Examples:
     parser.exe -t main user.dmp
   Show a memory page at a specific address:
     parser.exe -dump 0x7ff00 user.dmp
-
 ```
 
 ## Building
