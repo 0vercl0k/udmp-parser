@@ -4,7 +4,7 @@
 // Released under MIT License, by 0vercl0k - 2023
 //
 // With contribution from:
-//  * hugsy -(github.com / hugsy)
+//  * hugsy - (github.com / hugsy)
 //
 
 #include "udmp-parser.h"

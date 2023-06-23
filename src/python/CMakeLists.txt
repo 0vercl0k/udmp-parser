@@ -42,7 +42,7 @@ else()
     if(MSVC)
         install(FILES $<TARGET_PDB_FILE:udmp_parser> DESTINATION bindings/python OPTIONAL)
     endif(MSVC)
-endif(BUILD_PYTHON_PACKAGE)
+endif()
 
 if(WIN32)
     target_compile_definitions(udmp_parser PRIVATE NOMINMAX)
