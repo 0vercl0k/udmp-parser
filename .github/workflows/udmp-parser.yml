@@ -162,7 +162,7 @@ jobs:
     - name: Upload wheel
       uses: actions/upload-artifact@v3
       with:
-        path: *.whl
+        path: ./*.whl
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
