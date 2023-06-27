@@ -151,10 +151,12 @@ jobs:
         python -m pip install -r tests/requirements.txt -U
         python -m pip install --user -U .
         pytest -vvv ./tests
+        cd ../..
 
     - name: Build wheels
       uses: pypa/cibuildwheel@v2.13.1
       with:
+        package-dir: src/python
         output-dir: wheelhouse
 
     - uses: actions/upload-artifact@v3
