@@ -7,7 +7,7 @@ name = "udmp-parser"
 version = "0.4.2"
 description = "A Cross-Platform C++ parser library for Windows user minidumps."
 readme = "README.md"
-requires-python = ">=3.6"
+requires-python = ">=3.8"
 authors = [{ name = "0vercl0k", email = "0vercl0k@not-your-biz.net" }]
 classifiers = [
     "Development Status :: 4 - Beta",
