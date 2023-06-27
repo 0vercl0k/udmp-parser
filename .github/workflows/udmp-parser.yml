@@ -157,13 +157,14 @@ jobs:
     - name: Build wheel
       run: |
         cd src/python
-        python -m pip wheel .
+        mkdir ../../wheel
+        python -m pip wheel . -w ../../wheel
         cd ../..
 
     - name: Upload wheel
       uses: actions/upload-artifact@v3
       with:
-        path: ./*.whl
+        path: wheel/*.whl
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
