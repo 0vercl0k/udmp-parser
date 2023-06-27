@@ -76,7 +76,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.9]
+        # nanobind does not support Python < 3.8.
+        python-version: ['3.8', '3.9', '3.10', '3.11']
         variant:
           - {os: windows-latest, generator: msvc, arch: x64, config: RelWithDebInfo, py-arch: x64}
           - {os: windows-latest, generator: msvc, arch: win32, config: RelWithDebInfo, py-arch: x86}
@@ -85,7 +86,7 @@ jobs:
           - {os: ubuntu-latest, generator: clang, arch: x64, config: RelWithDebInfo, py-arch: x64}
           - {os: macos-latest, generator: clang, arch: x64, config: Release, py-arch: x64}
     runs-on: ${{ matrix.variant.os }}
-    name: bindings / ${{ matrix.variant.os }} / ${{ matrix.variant.generator }} / ${{ matrix.variant.arch }}
+    name: bindings / ${{ matrix.variant.os }} / ${{ matrix.variant.generator }} / ${{ matrix.python-version }} / ${{ matrix.variant.arch }}
     env:
       NB_CPU: 1
       CMAKE_FLAGS: "-DBUILD_PARSER:BOOL=OFF -DBUILD_PYTHON_BINDING:BOOL=ON"
@@ -156,11 +157,19 @@ jobs:
     - name: Build wheel
       run: |
         cd src/python
-        python -m pip wheel -w ../../artifact .
+        mkdir ../../wheel
+        python -m pip wheel . -w ../../wheel
         cd ../..
+
+    - name: Upload wheel
+      uses: actions/upload-artifact@v3
+      with:
+        name: wheels
+        path: wheel/*.whl
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
       with:
         name: python-${{ matrix.variant.os }}.${{ matrix.variant.generator }}-${{ matrix.variant.arch }}.${{ matrix.variant.config }}
         path: artifact/
+

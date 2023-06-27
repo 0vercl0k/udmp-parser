@@ -4,10 +4,10 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "udmp-parser"
-version = "0.4.1"
+version = "0.4.2"
 description = "A Cross-Platform C++ parser library for Windows user minidumps."
 readme = "README.md"
-requires-python = ">=3.2"
+requires-python = ">=3.8"
 authors = [{ name = "0vercl0k", email = "0vercl0k@not-your-biz.net" }]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -25,7 +25,7 @@ Homepage = "https://github.com/0vercl0k/udmp-parser"
 profile = "black"
 
 [tool.scikit-build]
-wheel.py-api = "cp32"
+wheel.py-api = "cp312"
 minimum-version = "0.4"
 build-dir = "build/{wheel_tag}"
 cmake.minimum-version = "3.20"
