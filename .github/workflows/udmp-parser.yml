@@ -151,13 +151,16 @@ jobs:
         python -m pip install -r tests/requirements.txt -U
         python -m pip install --user -U .
         pytest -vvv ./tests
-        cd ../..
 
-    - name: Build wheel
-      run: |
-        cd src/python
-        python -m pip wheel -w ../../artifact .
-        cd ../..
+    - name: Build wheels
+      uses: pypa/cibuildwheel@v2.13.1
+      with:
+        package-dir: .
+        output-dir: wheelhouse
+
+    - uses: actions/upload-artifact@v3
+      with:
+        path: ./wheelhouse/*.whl
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
@@ -165,11 +168,3 @@ jobs:
         name: python-${{ matrix.variant.os }}.${{ matrix.variant.generator }}-${{ matrix.variant.arch }}.${{ matrix.variant.config }}
         path: artifact/
 
-    - name: Upload to PyPi
-      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
-      uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        password: ${{ secrets.PYPI_API_TOKEN }}
-        print-hash: true
-        packages-dir: artifact/
-        verbose: true
