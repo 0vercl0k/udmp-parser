@@ -528,7 +528,7 @@ public:
       DbgPrintf("CreateFile failed with GLE=%lu.\n", GLE);
 
       if (GLE == ERROR_FILE_NOT_FOUND) {
-        DbgPrintf("  The file %s was not found.\n", PathFile);
+        DbgPrintf("The file %s was not found.\n", PathFile);
       }
 
       Success = false;
