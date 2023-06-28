@@ -19,6 +19,7 @@ import unittest
 # format: on
 import udmp_parser  # type: ignore
 from .utils import generate_minidump_from_process_name  # type: ignore
+
 # format: off
 
 TARGET_PROCESS_NAME: str = "winver.exe"
@@ -125,11 +126,15 @@ class TestParserBasic(unittest.TestCase):
         assert len(memory_regions)
 
     def test_memory_inexistent(self):
+        """This ensures that `ReadMemory` returns `None` when trying to
+        read a segment of memory that isn't described in the dump file."""
         parser = udmp_parser.UserDumpParser()
         assert parser.Parse(self.minidump_file)
-        assert parser.ReadMemory(0xdeadbeefbaadc0de) is None
+        assert parser.ReadMemory(0xDEADBEEFBAADC0DE) is None
 
     def test_memory_empty(self):
+        """This ensures that `ReadMemory` returns an empty array (and not `None`)
+        when trying to read into a memory region that has no data associated."""
         parser = udmp_parser.UserDumpParser()
         assert parser.Parse(self.minidump_file)
         mem = parser.Memory()
@@ -154,15 +159,11 @@ class TestParserBasic(unittest.TestCase):
         assert udmp_parser.utils.ProtectionToString(0x04) == "PAGE_READWRITE"
         assert udmp_parser.utils.ProtectionToString(0x08) == "PAGE_WRITECOPY"
         assert udmp_parser.utils.ProtectionToString(0x10) == "PAGE_EXECUTE"
-        assert udmp_parser.utils.ProtectionToString(
-            0x20) == "PAGE_EXECUTE_READ"
-        assert udmp_parser.utils.ProtectionToString(
-            0x40) == "PAGE_EXECUTE_READWRITE"
-        assert udmp_parser.utils.ProtectionToString(
-            0x80) == "PAGE_EXECUTE_WRITECOPY"
+        assert udmp_parser.utils.ProtectionToString(0x20) == "PAGE_EXECUTE_READ"
+        assert udmp_parser.utils.ProtectionToString(0x40) == "PAGE_EXECUTE_READWRITE"
+        assert udmp_parser.utils.ProtectionToString(0x80) == "PAGE_EXECUTE_WRITECOPY"
         assert (
-            udmp_parser.utils.ProtectionToString(
-                0x18) == "PAGE_WRITECOPY,PAGE_EXECUTE"
+            udmp_parser.utils.ProtectionToString(0x18) == "PAGE_WRITECOPY,PAGE_EXECUTE"
         )
         assert (
             udmp_parser.utils.ProtectionToString(0x19)
