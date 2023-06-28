@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <cinttypes>
+#include <cstdarg>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -74,9 +75,14 @@ namespace fs = std::filesystem;
 namespace udmpparser {
 
 #ifdef NDEBUG
-#define DbgPrint(...) /* */
+void DbgPrintf(const char *Format, ...) {}
 #else
-#define DbgPrint(fmt, ...) fprintf(stderr, fmt, __VA_ARGS__)
+void DbgPrintf(const char *Format, ...) {
+  va_list ArgList;
+  va_start(ArgList, Format);
+  vfprintf(stderr, Format, ArgList);
+  va_end(ArgList);
+}
 #endif
 
 #pragma pack(push)
@@ -251,19 +257,19 @@ struct Header_t {
 
   bool LooksGood() const {
     if (Signature != ExpectedSignature) {
-      DbgPrint("The signature (%" PRIx32
-               ") does not match the expected signature.\n",
-               Signature);
+      DbgPrintf("The signature (%" PRIx32
+                ") does not match the expected signature.\n",
+                Signature);
       return false;
     }
 
     if ((Flags & ValidFlagsMask) != Flags) {
-      DbgPrint("The flags have unknown bits set.\n");
+      DbgPrintf("The flags have unknown bits set.\n");
       return false;
     }
 
     if (NumberOfStreams == 0) {
-      DbgPrint("There is no streams.\n");
+      DbgPrintf("There is no streams.\n");
       return false;
     }
 
@@ -519,10 +525,10 @@ public:
       //
 
       const DWORD GLE = GetLastError();
-      DbgPrint("CreateFile failed with GLE=%lu.\n", GLE);
+      DbgPrintf("CreateFile failed with GLE=%lu.\n", GLE);
 
       if (GLE == ERROR_FILE_NOT_FOUND) {
-        DbgPrint("  The file %s was not found.\n", PathFile);
+        DbgPrintf("  The file %s was not found.\n", PathFile);
       }
 
       Success = false;
@@ -543,7 +549,7 @@ public:
       //
 
       const DWORD GLE = GetLastError();
-      DbgPrint("CreateFileMapping failed with GLE=%lu.\n", GLE);
+      DbgPrintf("CreateFileMapping failed with GLE=%lu.\n", GLE);
       Success = false;
       goto clean;
     }
@@ -561,7 +567,7 @@ public:
       //
 
       const DWORD GLE = GetLastError();
-      DbgPrint("MapViewOfFile failed with GLE=%lu.\n", GLE);
+      DbgPrintf("MapViewOfFile failed with GLE=%lu.\n", GLE);
       Success = false;
       goto clean;
     }
@@ -818,12 +824,12 @@ public:
     // Map a view of the file.
     //
     if (!std::filesystem::exists(PathFile)) {
-      DbgPrint("The dump file specified does not exist.\n");
+      DbgPrintf("The dump file specified does not exist.\n");
       return false;
     }
 
     if (!FileMap_.MapFile(PathFile)) {
-      DbgPrint("MapFile failed.\n");
+      DbgPrintf("MapFile failed.\n");
       return false;
     }
 
@@ -833,7 +839,7 @@ public:
 
     const auto Hdr = (dmp::Header_t *)FileMap_.ViewBase();
     if (!FileMap_.InBounds(Hdr, sizeof(*Hdr))) {
-      DbgPrint("The header are not in bounds.\n");
+      DbgPrintf("The header are not in bounds.\n");
       return false;
     }
 
@@ -842,7 +848,7 @@ public:
     //
 
     if (!Hdr->LooksGood()) {
-      DbgPrint("The header looks wrong.\n");
+      DbgPrintf("The header looks wrong.\n");
       return false;
     }
 
@@ -860,7 +866,7 @@ public:
     const auto StreamDirectorySize =
         Hdr->NumberOfStreams * sizeof(*StreamDirectory);
     if (!FileMap_.InBounds(StreamDirectory, StreamDirectorySize)) {
-      DbgPrint("The stream directories are out of the bounds of the file.\n");
+      DbgPrintf("The stream directories are out of the bounds of the file.\n");
       return false;
     }
 
@@ -881,7 +887,8 @@ public:
 
       const auto StreamStart = FileMap_.ViewBase() + Rva;
       if (!FileMap_.InBounds(StreamStart, DataSize)) {
-        DbgPrint("The stream number %" PRIu32 " is out-of-bounds\n", StreamIdx);
+        DbgPrintf("The stream number %" PRIu32 " is out-of-bounds\n",
+                  StreamIdx);
         return false;
       }
 
@@ -902,8 +909,8 @@ public:
           CurrentStreamDirectory->StreamType, CurrentStreamDirectory);
 
       if (!Inserted) {
-        DbgPrint("There are more than one stream of type %" PRIu32 "\n",
-                 uint32_t(CurrentStreamDirectory->StreamType));
+        DbgPrintf("There are more than one stream of type %" PRIu32 "\n",
+                  uint32_t(CurrentStreamDirectory->StreamType));
         return false;
       }
     }
@@ -935,9 +942,9 @@ public:
 
       const auto &Result = ParseStream(Directory->second);
       if (!Result.has_value()) {
-        DbgPrint("Seems like there is a missing case for %" PRIu32
-                 " in ParseStream?\n",
-                 uint32_t(Type));
+        DbgPrintf("Seems like there is a missing case for %" PRIu32
+                  " in ParseStream?\n",
+                  uint32_t(Type));
         return false;
       }
 
@@ -946,7 +953,7 @@ public:
       //
 
       if (!*Result) {
-        DbgPrint("Failed to parse stream %" PRIu32 ".\n", uint32_t(Type));
+        DbgPrintf("Failed to parse stream %" PRIu32 ".\n", uint32_t(Type));
         return false;
       }
     }
@@ -974,8 +981,8 @@ public:
     const bool ForegroundThreadExists =
         Threads_.find(*ForegroundThreadId_) != Threads_.end();
     if (!ForegroundThreadExists) {
-      DbgPrint("The Exception stream referenced a thread id that does not "
-               "exist in the thread list.\n");
+      DbgPrintf("The Exception stream referenced a thread id that does not "
+                "exist in the thread list.\n");
       return false;
     }
 
@@ -1123,7 +1130,7 @@ private:
                                    StreamDirectory->Location.Rva);
 
     if (StreamDirectory->Location.DataSize < sizeof(*Exception)) {
-      DbgPrint("The size of the Exception stream is not right.\n");
+      DbgPrintf("The size of the Exception stream is not right.\n");
       return false;
     }
 
@@ -1145,7 +1152,7 @@ private:
         (dmp::SystemInfoStream_t *)(FileMap_.ViewBase() +
                                     StreamDirectory->Location.Rva);
     if (StreamDirectory->Location.DataSize < sizeof(*SystemInfos)) {
-      DbgPrint("The size of the SystemInfo stream is not right.\n");
+      DbgPrintf("The size of the SystemInfo stream is not right.\n");
       return false;
     }
 
@@ -1167,7 +1174,7 @@ private:
     const auto NumberOfThreadsPtr =
         (uint32_t *)(FileMap_.ViewBase() + StreamDirectory->Location.Rva);
     if (StreamDirectory->Location.DataSize < sizeof(*NumberOfThreadsPtr)) {
-      DbgPrint("The size of the ThreadList stream is not right.\n");
+      DbgPrintf("The size of the ThreadList stream is not right.\n");
       return false;
     }
 
@@ -1179,7 +1186,7 @@ private:
     const auto Threads = (dmp::ThreadEntry_t *)(NumberOfThreadsPtr + 1);
     const auto StreamSize = NumberOfThreads * sizeof(*Threads);
     if (StreamDirectory->Location.DataSize < StreamSize) {
-      DbgPrint("The Thread stream is not right.\n");
+      DbgPrintf("The Thread stream is not right.\n");
       return false;
     }
 
@@ -1198,8 +1205,8 @@ private:
           (void *)(FileMap_.ViewBase() + CurrentThread->ThreadContext.Rva);
       const auto ThreadContextDataSize = CurrentThread->ThreadContext.DataSize;
       if (!FileMap_.InBounds(ThreadContext, ThreadContextDataSize)) {
-        DbgPrint("The thread context number %" PRIu32 " is out of bounds.\n",
-                 ThreadIdx);
+        DbgPrintf("The thread context number %" PRIu32 " is out of bounds.\n",
+                  ThreadIdx);
         return false;
       }
 
@@ -1224,7 +1231,7 @@ private:
         (dmp::MemoryInfoListStream_t *)(FileMap_.ViewBase() +
                                         StreamDirectory->Location.Rva);
     if (StreamDirectory->Location.DataSize < sizeof(*MemoryInfoList)) {
-      DbgPrint("The size of the MemoryInfoList stream is not right.\n");
+      DbgPrintf("The size of the MemoryInfoList stream is not right.\n");
       return false;
     }
 
@@ -1233,7 +1240,7 @@ private:
     //
 
     if (MemoryInfoList->SizeOfHeader < sizeof(*MemoryInfoList)) {
-      DbgPrint("The size of the MemoryInfoList header is not right.\n");
+      DbgPrintf("The size of the MemoryInfoList header is not right.\n");
       return false;
     }
 
@@ -1242,7 +1249,7 @@ private:
     //
 
     if (MemoryInfoList->SizeOfEntry < sizeof(dmp::MemoryInfo_t)) {
-      DbgPrint("The size of the MemoryInfo entries are not right.\n");
+      DbgPrintf("The size of the MemoryInfo entries are not right.\n");
       return false;
     }
 
@@ -1261,7 +1268,7 @@ private:
         MemoryInfoList->SizeOfHeader +
         (MemoryInfoList->SizeOfEntry * MemoryInfoList->NumberOfEntries);
     if (StreamSize != StreamDirectory->Location.DataSize) {
-      DbgPrint("The MemoryInfoList stream size is not right.\n");
+      DbgPrintf("The MemoryInfoList stream size is not right.\n");
       return false;
     }
 
@@ -1284,8 +1291,8 @@ private:
           Mem_.try_emplace(BaseAddress, *CurrentMemoryInfo);
 
       if (!Inserted) {
-        DbgPrint("The region %" PRIx64 " is already in the memory map.\n",
-                 BaseAddress);
+        DbgPrintf("The region %" PRIx64 " is already in the memory map.\n",
+                  BaseAddress);
         return false;
       }
     }
@@ -1302,7 +1309,7 @@ private:
     const auto NumberOfModulesPtr =
         (uint32_t *)(FileMap_.ViewBase() + StreamDirectory->Location.Rva);
     if (StreamDirectory->Location.DataSize < sizeof(*NumberOfModulesPtr)) {
-      DbgPrint("The ModuleList stream is too small.\n");
+      DbgPrintf("The ModuleList stream is too small.\n");
       return false;
     }
 
@@ -1315,7 +1322,7 @@ private:
     const size_t StreamSize =
         sizeof(*NumberOfModulesPtr) + (NumberOfModules * sizeof(*Module));
     if (StreamSize != StreamDirectory->Location.DataSize) {
-      DbgPrint("The ModuleList stream size is not right.\n");
+      DbgPrintf("The ModuleList stream size is not right.\n");
       return false;
     }
 
@@ -1334,7 +1341,7 @@ private:
       //
 
       if (!FileMap_.InBounds(NameLengthPtr, NameRecordLength)) {
-        DbgPrint("The module name record is not in bounds.\n");
+        DbgPrintf("The module name record is not in bounds.\n");
         return false;
       }
 
@@ -1345,9 +1352,9 @@ private:
       const uint32_t NameLength = *NameLengthPtr;
       const bool WellFormed = (NameLength % 2) == 0;
       if (!WellFormed) {
-        DbgPrint("The MINIDUMP_STRING for the module index %" PRIu32
-                 " is not well formed.\n",
-                 ModuleIdx);
+        DbgPrintf("The MINIDUMP_STRING for the module index %" PRIu32
+                  " is not well formed.\n",
+                  ModuleIdx);
         return false;
       }
 
@@ -1360,9 +1367,9 @@ private:
       std::string ModuleName(StringLen, 0);
       for (size_t CharIdx = 0; CharIdx < NameLength; CharIdx += 2) {
         if (!isprint(ModuleNamePtr[CharIdx])) {
-          DbgPrint("The MINIDUMP_STRING for the module index %" PRIu32
-                   " has a non printable ascii character.\n",
-                   ModuleIdx);
+          DbgPrintf("The MINIDUMP_STRING for the module index %" PRIu32
+                    " has a non printable ascii character.\n",
+                    ModuleIdx);
           return false;
         }
 
@@ -1376,9 +1383,9 @@ private:
       const auto CvRecord = FileMap_.ViewBase() + CurrentModule->CvRecord.Rva;
       const auto CvRecordSize = CurrentModule->CvRecord.DataSize;
       if (!FileMap_.InBounds(CvRecord, CvRecordSize)) {
-        DbgPrint("The Cv record of the module index %" PRIu32
-                 " is not in bounds.\n",
-                 ModuleIdx);
+        DbgPrintf("The Cv record of the module index %" PRIu32
+                  " is not in bounds.\n",
+                  ModuleIdx);
         return false;
       }
 
@@ -1390,9 +1397,9 @@ private:
           FileMap_.ViewBase() + CurrentModule->MiscRecord.Rva;
       const auto MiscRecordSize = CurrentModule->MiscRecord.DataSize;
       if (!FileMap_.InBounds(MiscRecord, MiscRecordSize)) {
-        DbgPrint("The Misc record of the module index %" PRIu32
-                 " is not in bounds.\n",
-                 ModuleIdx);
+        DbgPrintf("The Misc record of the module index %" PRIu32
+                  " is not in bounds.\n",
+                  ModuleIdx);
         return false;
       }
 
@@ -1417,7 +1424,7 @@ private:
         (dmp::Memory64ListStreamHdr_t *)(FileMap_.ViewBase() +
                                          StreamDirectory->Location.Rva);
     if (StreamDirectory->Location.DataSize < sizeof(*Memory64List)) {
-      DbgPrint("The Memory64List stream is too small.\n");
+      DbgPrintf("The Memory64List stream is too small.\n");
       return false;
     }
 
@@ -1430,7 +1437,7 @@ private:
     const uint64_t StreamSize =
         sizeof(*Memory64List) + (NumberOfMemoryRanges * sizeof(*Descriptor));
     if (StreamDirectory->Location.DataSize < StreamSize) {
-      DbgPrint("The Memory64List stream is not right.\n");
+      DbgPrintf("The Memory64List stream is not right.\n");
       return false;
     }
 
@@ -1455,9 +1462,9 @@ private:
       const auto StartOfMemoryRange = CurrentDescriptor->StartOfMemoryRange;
       const size_t DataSize = size_t(CurrentDescriptor->DataSize);
       if (!FileMap_.InBounds(CurrentData, DataSize)) {
-        DbgPrint("The Memory64List memory content number %" PRIu32
-                 " has its data out-of-bounds.\n",
-                 RangeIdx);
+        DbgPrintf("The Memory64List memory content number %" PRIu32
+                  " has its data out-of-bounds.\n",
+                  RangeIdx);
         return false;
       }
 
@@ -1465,11 +1472,11 @@ private:
       // If we don't find an existing entry, there is something funky going on.
       //
 
-      auto const &It = Mem_.find(StartOfMemoryRange);
+      const auto &It = Mem_.find(StartOfMemoryRange);
       if (It == Mem_.end()) {
-        DbgPrint("The memory region starting at %" PRIx64
-                 " does not exist in the map.\n",
-                 StartOfMemoryRange);
+        DbgPrintf("The memory region starting at %" PRIx64
+                  " does not exist in the map.\n",
+                  StartOfMemoryRange);
         return false;
       }
 
