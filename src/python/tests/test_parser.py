@@ -130,7 +130,7 @@ class TestParserBasic(unittest.TestCase):
         read a segment of memory that isn't described in the dump file."""
         parser = udmp_parser.UserDumpParser()
         assert parser.Parse(self.minidump_file)
-        assert parser.ReadMemory(0xDEADBEEFBAADC0DE) is None
+        assert parser.ReadMemory(0xDEADBEEF_BAADC0DE, 0x10) is None
 
     def test_memory_empty(self):
         """This ensures that `ReadMemory` returns an empty array (and not `None`)
@@ -159,11 +159,15 @@ class TestParserBasic(unittest.TestCase):
         assert udmp_parser.utils.ProtectionToString(0x04) == "PAGE_READWRITE"
         assert udmp_parser.utils.ProtectionToString(0x08) == "PAGE_WRITECOPY"
         assert udmp_parser.utils.ProtectionToString(0x10) == "PAGE_EXECUTE"
-        assert udmp_parser.utils.ProtectionToString(0x20) == "PAGE_EXECUTE_READ"
-        assert udmp_parser.utils.ProtectionToString(0x40) == "PAGE_EXECUTE_READWRITE"
-        assert udmp_parser.utils.ProtectionToString(0x80) == "PAGE_EXECUTE_WRITECOPY"
+        assert udmp_parser.utils.ProtectionToString(
+            0x20) == "PAGE_EXECUTE_READ"
+        assert udmp_parser.utils.ProtectionToString(
+            0x40) == "PAGE_EXECUTE_READWRITE"
+        assert udmp_parser.utils.ProtectionToString(
+            0x80) == "PAGE_EXECUTE_WRITECOPY"
         assert (
-            udmp_parser.utils.ProtectionToString(0x18) == "PAGE_WRITECOPY,PAGE_EXECUTE"
+            udmp_parser.utils.ProtectionToString(
+                0x18) == "PAGE_WRITECOPY,PAGE_EXECUTE"
         )
         assert (
             udmp_parser.utils.ProtectionToString(0x19)
