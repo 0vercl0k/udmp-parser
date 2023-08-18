@@ -198,6 +198,14 @@ NB_MODULE(udmp_parser, m) {
       .def_ro("StreamType", &udmpparser::dmp::Directory_t::StreamType)
       .def_ro("Location", &udmpparser::dmp::Directory_t::Location);
 
+  nb::class_<udmpparser::dmp::MemoryInfoListStream_t>(m, "MemoryInfoListStream")
+      .def_ro("SizeOfHeader",
+              &udmpparser::dmp::MemoryInfoListStream_t::SizeOfHeader)
+      .def_ro("SizeOfEntry",
+              &udmpparser::dmp::MemoryInfoListStream_t::SizeOfEntry)
+      .def_ro("NumberOfEntries",
+              &udmpparser::dmp::MemoryInfoListStream_t::NumberOfEntries);
+
   nb::class_<udmpparser::dmp::Memory64ListStreamHdr_t>(m,
                                                        "Memory64ListStreamHdr")
       .def_ro("NumberOfMemoryRanges",
@@ -320,7 +328,7 @@ NB_MODULE(udmp_parser, m) {
       .def("__repr__", &udmpparser::MemBlock_t::to_string);
   ;
 
-  nb::class_<udmpparser::Module_t>(m, "Modules")
+  nb::class_<udmpparser::Module_t>(m, "Module")
       .def(nb::init<const udmpparser::dmp::ModuleEntry_t &, const std::string &,
                     const void *, const void *>(),
            nb::rv_policy::take_ownership)

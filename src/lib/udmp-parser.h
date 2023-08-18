@@ -226,7 +226,7 @@ struct Context64_t {
   uint128_t Xmm13;
   uint128_t Xmm14;
   uint128_t Xmm15;
-  uint8_t Padding[0x60];
+  std::array<uint8_t, 0x60> Padding;
   std::array<uint128_t, 26> VectorRegister;
   uint64_t VectorControl;
   uint64_t DebugControl;
