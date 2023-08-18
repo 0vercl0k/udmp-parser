@@ -75,9 +75,9 @@ namespace fs = std::filesystem;
 namespace udmpparser {
 
 #ifdef NDEBUG
-void DbgPrintf(const char *Format, ...) { (void)Format; }
+static void DbgPrintf(const char *Format, ...) { (void)Format; }
 #else
-void DbgPrintf(const char *Format, ...) {
+static void DbgPrintf(const char *Format, ...) {
   va_list ArgList;
   va_start(ArgList, Format);
   vfprintf(stderr, Format, ArgList);

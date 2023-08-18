@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "udmp-parser"
-version = "0.4.3"
+version = "0.4.4"
 description = "A Cross-Platform C++ parser library for Windows user minidumps."
 readme = "README.md"
 requires-python = ">=3.8"
@@ -21,6 +21,9 @@ dependencies = []
 [project.urls]
 Homepage = "https://github.com/0vercl0k/udmp-parser"
 
+[project.scripts]
+generate_minidump = "udmp_parser.utils:generate_minidump_from_command_line"
+
 [tool.isort]
 profile = "black"
 
@@ -29,9 +32,7 @@ wheel.py-api = "cp312"
 minimum-version = "0.4"
 build-dir = "build/{wheel_tag}"
 cmake.minimum-version = "3.20"
-cmake.args = [
-    "-DBUILD_PYTHON_PACKAGE:BOOL=ON",
-]
+cmake.args = ["-DBUILD_PYTHON_PACKAGE:BOOL=ON"]
 
 [tool.cibuildwheel]
 build-verbosity = 1

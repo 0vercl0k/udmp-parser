@@ -24,7 +24,13 @@ list(APPEND CMAKE_PREFIX_PATH "${NB_DIR}")
 
 find_package(nanobind CONFIG REQUIRED)
 
-nanobind_add_module(udmp_parser NB_STATIC src/udmp_parser.cc)
+set(CMAKE_CXX_STANDARD 20)
+
+nanobind_add_module(udmp_parser NB_STATIC src/udmp_parser_utils.cc src/udmp_parser.cc)
+
+if(MSVC)
+    target_link_libraries(udmp_parser PRIVATE DbgHelp.lib)
+endif(MSVC)
 
 if(BUILD_PYTHON_PACKAGE)
     #
