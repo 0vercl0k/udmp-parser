@@ -160,11 +160,13 @@ void udmp_parser_utils_module(nb::module_ &m) {
       },
       "Get a string representation of the memory protection");
 
+#if defined(_WIN32)
   utils.def(
       "generate_minidump", GenerateMinidumpFromProcessId, "TargetPid"_a,
       "MiniDumpFilePath"_a,
       "Generate a minidump for the target ProcessId, write it to the given "
       "path. Returns 0 on success, non-zero on error.");
+#endif // _WIN32
 
   utils.def(
       "generate_minidump_from_command_line",

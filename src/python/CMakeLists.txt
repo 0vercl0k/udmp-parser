@@ -38,6 +38,7 @@ if(BUILD_PYTHON_PACKAGE)
     #
     target_include_directories(udmp_parser PRIVATE ../lib)
     install(TARGETS udmp_parser LIBRARY DESTINATION .)
+    install(DIRECTORY udmp_parser-stubs DESTINATION .)
 else()
     #
     # This is the general case, when built from the root cmakefile
