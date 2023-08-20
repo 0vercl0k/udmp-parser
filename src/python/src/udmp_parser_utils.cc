@@ -19,6 +19,8 @@
 #if defined(_WIN32)
 #include <DbgHelp.h>
 #include <windows.h>
+#else
+#include <stdio.h>
 #endif // _WIN32
 
 namespace nb = nanobind;
@@ -158,7 +160,6 @@ void udmp_parser_utils_module(nb::module_ &m) {
       },
       "Get a string representation of the memory protection");
 
-#if defined(_WIN32)
   utils.def(
       "generate_minidump", GenerateMinidumpFromProcessId, "TargetPid"_a,
       "MiniDumpFilePath"_a,
@@ -168,6 +169,7 @@ void udmp_parser_utils_module(nb::module_ &m) {
   utils.def(
       "generate_minidump_from_command_line",
       []() -> int {
+#if defined(_WIN32)
         nb::module_ sys = nb::module_::import_("sys");
         nb::list argv = sys.attr("argv");
         if (!argv.is_valid()) {
@@ -184,9 +186,11 @@ void udmp_parser_utils_module(nb::module_ &m) {
         uint32_t TargetPid = static_cast<uint32_t>(std::atol(a1.c_str()));
         std::filesystem::path MinidumpPath{a2.c_str()};
         return GenerateMinidumpFromProcessId(TargetPid, MinidumpPath);
+#else
+        ::puts("This command only works on Windows");
+        return 0;
+#endif // _WIN32
       },
       "Generate a minidump for the target ProcessId, write it to the given "
       "path. Returns 0 on success, non-zero on error.");
-
-#endif // _WIN32
 }
