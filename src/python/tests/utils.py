@@ -74,7 +74,7 @@ def generate_minidump_from_process_name(
 
     dump_file_path = output_dir / f"minidump-{process_name}-{int(time.time())}.dmp"
 
-    if udmp_parser.utils.generate_minidump(process_id, dump_file_path) != 0:
+    if not udmp_parser.utils.generate_minidump(process_id, dump_file_path):
         return None
 
     print(f"Minidump generated successfully: PID={process_id} -> {dump_file_path}")

@@ -1,6 +1,7 @@
 # udmp-parser: A Cross-Platform C++ parser library for Windows user minidumps
 
 ![Build status](https://github.com/0vercl0k/udmp-parser/workflows/Builds/badge.svg)
+[![Downloads](https://static.pepy.tech/badge/udmp-parser/month)](https://pepy.tech/project/udmp-parser)
 
 This is a cross-platform (Windows / Linux / OSX / x86 / x64) C++ library that parses Windows user [minidump](https://docs.microsoft.com/en-us/windows/win32/debug/minidump-files) dumps (`.dump /m` and **not** `.dump /f` in WinDbg usermode).
 
