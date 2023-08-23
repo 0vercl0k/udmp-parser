@@ -3,6 +3,7 @@ from typing import Union, Optional, overload
 from enum import Enum, IntEnum
 import udmp_parser
 
+
 class ProcessorArch(IntEnum):
     X86 = 0
     ARM = 5
@@ -10,11 +11,14 @@ class ProcessorArch(IntEnum):
     AMD64 = 9
     Unknown = 0xFFFF
 
+
 class Arch(IntEnum):
     X86 = 0
     X64 = 1
 
+
 kWOW64_SIZE_OF_80387_REGISTERS: int = 80
+
 
 class FloatingSaveArea32:
     ControlWord: int
@@ -26,6 +30,7 @@ class FloatingSaveArea32:
     DataSelector: int
     RegisterArea: bytearray  # size =kWOW64_SIZE_OF_80387_REGISTERS
     Cr0NpxState: int
+
 
 class Context32:
     ContextFlags: int
@@ -54,9 +59,11 @@ class Context32:
     SegSs: int
     ExtendedRegisters: bytearray  # size =kWOW64_MAXIMUM_SUPPORTED_EXTENSION
 
+
 class uint128_t:
     Low: int
     High: int
+
 
 class Context64:
     P1Home: int
@@ -136,15 +143,18 @@ class Context64:
     LastExceptionToRip: int
     LastExceptionFromRip: int
 
+
 class Directory:
     StreamType: StreamType = StreamType.Unused
     LocationDescriptor32_t: int
+
 
 class FileMap:
     def InBounds(self, arg0: int, arg1: int, /) -> bool: ...
     def MapFile(self, arg: str, /) -> bool: ...
     def ViewBase(self) -> int: ...
     def __init__(self) -> None: ...
+
 
 class FixedFileInfo:
     Signature: int = 0
@@ -161,6 +171,7 @@ class FixedFileInfo:
     FileDateMS: int = 0
     FileDateLS: int = 0
 
+
 class Header:
     Signature: int
     Version: int
@@ -175,11 +186,13 @@ class Header:
     ValidFlagsMask: int
 
     def LooksGood(self) -> bool: ...
+
     def __init__(*args, **kwargs):
         """
         Initialize self.  See help(type(self)) for accurate signature.
         """
         ...
+
 
 class LocationDescriptor32:
     DataSize: int
@@ -191,6 +204,7 @@ class LocationDescriptor32:
         """
         ...
 
+
 class LocationDescriptor64:
     DataSize: int
     Rva: int
@@ -200,6 +214,7 @@ class LocationDescriptor64:
         Initialize self.  See help(type(self)) for accurate signature.
         """
         ...
+
 
 class MemBlock:
     BaseAddress: int
@@ -215,9 +230,11 @@ class MemBlock:
     def __init__(self, arg: udmp_parser.MemoryInfo, /) -> None: ...
     def __str__(self) -> str: ...
 
+
 class Memory64ListStreamHdr:
     StartOfMemoryRange: int
     DataSize: int
+
 
 class MemoryDescriptor:
     ThreadId: int
@@ -228,6 +245,7 @@ class MemoryDescriptor:
     Stack: MemoryDescriptor
     ThreadContext: LocationDescriptor32
 
+
 class ThreadEntry:
     ThreadId: int
     SuspendCount: int
@@ -237,6 +255,7 @@ class ThreadEntry:
     Stack: MemoryDescriptor
     ThreadContext: LocationDescriptor32
 
+
 class Thread_t:
     ThreadId: int
     SuspendCount: int
@@ -245,14 +264,17 @@ class Thread_t:
     Teb: int
     Context: Union[UnknownContext, Context32, Context64]
 
+
 class MemoryDescriptor64:
     StartOfMemoryRange: int
     DataSize: int
+
 
 class MemoryInfoListStream:
     SizeOfHeader: int
     SizeOfEntry: int
     NumberOfEntries: int
+
 
 class MemoryInfo:
     BaseAddress: int
@@ -264,6 +286,7 @@ class MemoryInfo:
     Protect: int
     Type: int
     __alignment2: int
+
 
 class Module:
     BaseAddress: int
@@ -279,6 +302,7 @@ class Module:
     def Data(self) -> int: ...
     def __str__(self) -> str: ...
 
+
 class StreamType(IntEnum):
     Unused = 0
     ThreadList = 3
@@ -287,6 +311,7 @@ class StreamType(IntEnum):
     SystemInfo = 7
     Memory64List = 9
     MemoryInfoList = 16
+
 
 class SystemInfoStream:
     ProcessorArchitecture: ProcessorArch
@@ -302,6 +327,7 @@ class SystemInfoStream:
     SuiteMask: int
     Reserved2: int
 
+
 class ExceptionRecord:
     ExceptionCode: int
     ExceptionFlags: int
@@ -311,11 +337,13 @@ class ExceptionRecord:
     __unusedAlignment: int
     ExceptionInformation: list[int]  # size=kEXCEPTION_MAXIMUM_PARAMETERS
 
+
 class ExceptionStream:
     ThreadId: int
     __alignment: int
     ExceptionRecord: ExceptionRecord
     ThreadContext: LocationDescriptor32
+
 
 class UnknownContext:
     def __init__(*args, **kwargs):
@@ -324,35 +352,44 @@ class UnknownContext:
         """
         ...
 
+
 class UserDumpParser:
     def ForegroundThreadId(self) -> Optional[int]: ...
+
     def GetMemoryBlock(self, arg: int, /) -> udmp_parser.MemBlock:
         """
         Access a specific MemoryBlock
         """
         ...
+
     def Memory(self) -> dict[int, udmp_parser.MemBlock]: ...
+
     def Modules(self) -> dict[int, udmp_parser.Modules]:
         """
         Get the minidump modules
         """
         ...
+
     def Parse(self, arg: os.PathLike, /) -> bool:
         """
         Parse the minidump given in argument.
         """
         ...
+
     def ReadMemory(self, arg0: int, arg1: int, /) -> Optional[list[int]]:
         """
         Read bytes from memory
         """
         ...
+
     def Threads(self) -> dict[int, udmp_parser.Thread]:
         """
         Get the minidump threads
         """
         ...
+
     def __init__(self) -> None: ...
+
 
 class version:
     def __init__(*args, **kwargs):

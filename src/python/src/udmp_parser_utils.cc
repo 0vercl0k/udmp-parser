@@ -9,69 +9,51 @@
 
 #include "udmp-parser.h"
 
+#include <filesystem>
 #include <memory>
-#include <string>
-
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/filesystem.h>
 #include <nanobind/stl/string.h>
 
-#if defined(_WIN32)
-#include <DbgHelp.h>
-#include <windows.h>
-#else
-#include <stdio.h>
-#endif // _WIN32
-
 namespace nb = nanobind;
-using namespace nb::literals;
 
-template <typename T, auto Deleter>
-using GenericHandle = std::unique_ptr<T, decltype([](T *h) {
-                                        if (h) {
-                                          Deleter(h);
-                                          h = nullptr;
-                                        }
-                                      })>;
-#if defined(_WIN32)
-using UniqueHandle = GenericHandle<void, ::CloseHandle>;
-#else
-using UniqueHandle = GenericHandle<FILE, ::fclose>;
-#endif
+#ifdef _WIN32
+#include <dbghelp.h>
+#include <windows.h>
 
-#if defined(_WIN32)
-static auto
-GenerateMinidumpFromProcessId(uint32_t TargetPid,
-                              std::filesystem::path &MiniDumpFilePath) -> int {
-  auto hFile = UniqueHandle{
-      ::CreateFileW(MiniDumpFilePath.wstring().c_str(), GENERIC_WRITE, 0,
-                    nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr)};
-  if (!hFile) {
-    return -1;
+bool GenerateMinidumpFromProcessId(
+    const uint32_t TargetPid, const std::filesystem::path &MiniDumpFilePath) {
+  const HANDLE File =
+      CreateFileA(MiniDumpFilePath.string().c_str(), GENERIC_WRITE, 0, nullptr,
+                  CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+  if (File == INVALID_HANDLE_VALUE) {
+    return false;
   }
 
-  auto hProcess =
-      UniqueHandle{::OpenProcess(PROCESS_ALL_ACCESS, false, TargetPid)};
-  if (!hProcess) {
-    return -2;
+  const HANDLE Process = OpenProcess(PROCESS_ALL_ACCESS, false, TargetPid);
+  if (Process == INVALID_HANDLE_VALUE) {
+    CloseHandle(File);
+    return false;
   }
 
-  MINIDUMP_EXCEPTION_INFORMATION exceptionInfo{};
-  MINIDUMP_TYPE flags = static_cast<MINIDUMP_TYPE>(
-      MINIDUMP_TYPE::MiniDumpWithFullMemory |
-      MINIDUMP_TYPE::MiniDumpWithDataSegs | MINIDUMP_TYPE::MiniDumpScanMemory |
-      MINIDUMP_TYPE::MiniDumpWithHandleData |
-      MINIDUMP_TYPE::MiniDumpWithFullMemoryInfo);
+  MINIDUMP_EXCEPTION_INFORMATION ExceptionInfo = {};
+  const auto Flags = MINIDUMP_TYPE::MiniDumpWithFullMemory |
+                     MINIDUMP_TYPE::MiniDumpWithDataSegs |
+                     MINIDUMP_TYPE::MiniDumpScanMemory |
+                     MINIDUMP_TYPE::MiniDumpWithHandleData |
+                     MINIDUMP_TYPE::MiniDumpWithFullMemoryInfo;
 
-  const auto bSuccess =
-      ::MiniDumpWriteDump(hProcess.get(), TargetPid, hFile.get(), flags,
-                          &exceptionInfo, nullptr, nullptr);
-  return bSuccess ? 0 : -3;
+  const auto Success =
+      MiniDumpWriteDump(Process, TargetPid, File, MINIDUMP_TYPE(Flags),
+                        &ExceptionInfo, nullptr, nullptr);
+
+  CloseHandle(Process);
+  CloseHandle(File);
+  return Success;
 }
 #endif
 
 void udmp_parser_utils_module(nb::module_ &m) {
-
   auto utils = m.def_submodule("utils", "Helper functions");
 
   utils.def(
@@ -161,38 +143,30 @@ void udmp_parser_utils_module(nb::module_ &m) {
       "Get a string representation of the memory protection");
 
 #if defined(_WIN32)
-  utils.def(
-      "generate_minidump", GenerateMinidumpFromProcessId, "TargetPid"_a,
-      "MiniDumpFilePath"_a,
-      "Generate a minidump for the target ProcessId, write it to the given "
-      "path. Returns 0 on success, non-zero on error.");
-#endif // _WIN32
+  utils.def("generate_minidump", GenerateMinidumpFromProcessId, "TargetPid",
+            "MiniDumpFilePath",
+            "Generate a minidump for TargetPid and save it to the given path. "
+            "Returns true on success.");
 
   utils.def(
       "generate_minidump_from_command_line",
-      []() -> int {
-#if defined(_WIN32)
+      []() -> bool {
         nb::module_ sys = nb::module_::import_("sys");
         nb::list argv = sys.attr("argv");
         if (!argv.is_valid()) {
-          return 1;
+          return false;
         }
 
         if (argv.size() != 3) {
-          return 2;
+          return false;
         }
 
         auto a1 = nb::str(nb::handle(argv[1]));
+        const auto TargetPid = uint32_t(std::atol(a1.c_str()));
         auto a2 = nb::str(nb::handle(argv[2]));
-
-        uint32_t TargetPid = static_cast<uint32_t>(std::atol(a1.c_str()));
-        std::filesystem::path MinidumpPath{a2.c_str()};
-        return GenerateMinidumpFromProcessId(TargetPid, MinidumpPath);
-#else
-        ::puts("This command only works on Windows");
-        return 0;
-#endif // _WIN32
+        return GenerateMinidumpFromProcessId(TargetPid, a2.c_str());
       },
-      "Generate a minidump for the target ProcessId, write it to the given "
-      "path. Returns 0 on success, non-zero on error.");
+      "Generate a minidump for the target TargetPid, write it to the given "
+      "path. Returns true on success.");
+#endif // _WIN32
 }
