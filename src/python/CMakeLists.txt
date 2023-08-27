@@ -24,7 +24,13 @@ list(APPEND CMAKE_PREFIX_PATH "${NB_DIR}")
 
 find_package(nanobind CONFIG REQUIRED)
 
-nanobind_add_module(udmp_parser NB_STATIC src/udmp_parser.cc)
+set(CMAKE_CXX_STANDARD 20)
+
+nanobind_add_module(udmp_parser NB_STATIC src/udmp_parser_utils.cc src/udmp_parser.cc)
+
+if(MSVC)
+    target_link_libraries(udmp_parser PRIVATE DbgHelp.lib)
+endif(MSVC)
 
 if(BUILD_PYTHON_PACKAGE)
     #
@@ -32,6 +38,7 @@ if(BUILD_PYTHON_PACKAGE)
     #
     target_include_directories(udmp_parser PRIVATE ../lib)
     install(TARGETS udmp_parser LIBRARY DESTINATION .)
+    install(DIRECTORY udmp_parser-stubs DESTINATION .)
 else()
     #
     # This is the general case, when built from the root cmakefile

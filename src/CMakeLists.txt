@@ -9,7 +9,7 @@ project(
     udmp-parser
     DESCRIPTION "A Cross-Platform C++ parser library for Windows user minidumps."
     HOMEPAGE_URL https://github.com/0vercl0k/udmp-parser
-    VERSION 0.4
+    VERSION 0.5.0
 )
 
 set(PROJECT_AUTHOR 0vercl0k)

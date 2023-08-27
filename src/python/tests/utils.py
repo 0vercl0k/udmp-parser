@@ -13,6 +13,8 @@ from ctypes import wintypes
 import time
 from typing import Optional, Tuple
 
+import udmp_parser
+
 
 def get_process_id(process_name: str):
     kernel32 = ctypes.WinDLL("kernel32")
@@ -63,104 +65,6 @@ def get_process_id(process_name: str):
     return res
 
 
-def generate_minidump(process_id: int, dump_file_path: pathlib.Path) -> bool:
-    kernel32 = ctypes.WinDLL("kernel32")
-    dbghelp = ctypes.WinDLL("dbghelp")
-
-    # Constants
-    INVALID_HANDLE_VALUE = -1
-    CREATE_ALWAYS = 2
-    PROCESS_ALL_ACCESS = 0x1F0FFF
-    GENERIC_WRITE = 0x40000000
-    FILE_ATTRIBUTE_NORMAL = 0x80
-
-    MiniDumpNormal = 0x00000000
-    MiniDumpWithDataSegs = 0x00000001
-    MiniDumpWithFullMemory = 0x00000002
-    MiniDumpWithHandleData = 0x00000004
-    MiniDumpScanMemory = 0x00000010
-    MiniDumpWithFullMemoryInfo = 0x00000800
-
-    class MINIDUMP_EXCEPTION_INFORMATION(ctypes.Structure):
-        _fields_ = [
-            ("ThreadId", ctypes.c_ulong),
-            ("ExceptionPointers", ctypes.POINTER(ctypes.c_void_p)),
-            ("ClientPointers", ctypes.c_ulong),
-        ]
-
-    class MINIDUMP_CALLBACK_INFORMATION(ctypes.Structure):
-        _fields_ = [
-            ("CallbackRoutine", ctypes.c_void_p),
-            ("CallbackParam", ctypes.c_void_p),
-        ]
-
-    class MINIDUMP_USER_STREAM(ctypes.Structure):
-        _fields_ = [
-            ("Type", ctypes.c_ulong),
-            ("BufferSize", ctypes.c_ulong),
-            ("Buffer", ctypes.POINTER(ctypes.c_void_p)),
-        ]
-
-    class MINIDUMP_USER_STREAM_INFORMATION(ctypes.Structure):
-        _fields_ = [
-            ("UserStreamCount", ctypes.c_ulong),
-            ("UserStreamArray", ctypes.POINTER(MINIDUMP_USER_STREAM)),
-            ("Reserved0", ctypes.c_ulong),
-            ("Reserved1", ctypes.c_void_p),
-        ]
-
-    MiniDumpWriteDump = dbghelp.MiniDumpWriteDump
-    MiniDumpWriteDump.argtypes = [
-        ctypes.c_void_p,
-        ctypes.c_ulong,
-        ctypes.c_void_p,
-        ctypes.c_ulong,
-        ctypes.POINTER(MINIDUMP_EXCEPTION_INFORMATION),
-        ctypes.POINTER(MINIDUMP_USER_STREAM_INFORMATION),
-        ctypes.POINTER(MINIDUMP_CALLBACK_INFORMATION),
-    ]
-    MiniDumpWriteDump.restype = ctypes.c_bool
-
-    hProcess = kernel32.OpenProcess(PROCESS_ALL_ACCESS, False, process_id)
-
-    if not hProcess:
-        return False
-
-    bSuccess = False
-    hFile = kernel32.CreateFileW(
-        str(dump_file_path.absolute()),
-        GENERIC_WRITE,
-        0,
-        None,
-        CREATE_ALWAYS,
-        FILE_ATTRIBUTE_NORMAL,
-        None,
-    )
-
-    if hFile != INVALID_HANDLE_VALUE:
-        flags = (
-            MiniDumpWithFullMemory
-            | MiniDumpWithDataSegs
-            | MiniDumpScanMemory
-            | MiniDumpWithHandleData
-            | MiniDumpWithFullMemoryInfo
-        )
-        bSuccess = MiniDumpWriteDump(
-            hProcess,
-            process_id,
-            hFile,
-            flags,
-            None,
-            None,
-            None,
-        )
-
-        kernel32.CloseHandle(hFile)
-
-    kernel32.CloseHandle(hProcess)
-    return bSuccess
-
-
 def generate_minidump_from_process_name(
     process_name: str = "explorer.exe", output_dir: pathlib.Path = pathlib.Path(".")
 ) -> Optional[Tuple[int, pathlib.Path]]:
@@ -170,7 +74,7 @@ def generate_minidump_from_process_name(
 
     dump_file_path = output_dir / f"minidump-{process_name}-{int(time.time())}.dmp"
 
-    if not generate_minidump(process_id, dump_file_path):
+    if not udmp_parser.utils.generate_minidump(process_id, dump_file_path):
         return None
 
     print(f"Minidump generated successfully: PID={process_id} -> {dump_file_path}")

@@ -75,9 +75,9 @@ namespace fs = std::filesystem;
 namespace udmpparser {
 
 #ifdef NDEBUG
-void DbgPrintf(const char *Format, ...) { (void)Format; }
+static void DbgPrintf(const char *Format, ...) { (void)Format; }
 #else
-void DbgPrintf(const char *Format, ...) {
+static void DbgPrintf(const char *Format, ...) {
   va_list ArgList;
   va_start(ArgList, Format);
   vfprintf(stderr, Format, ArgList);
@@ -226,7 +226,7 @@ struct Context64_t {
   uint128_t Xmm13;
   uint128_t Xmm14;
   uint128_t Xmm15;
-  uint8_t Padding[0x60];
+  std::array<uint8_t, 0x60> Padding;
   std::array<uint128_t, 26> VectorRegister;
   uint64_t VectorControl;
   uint64_t DebugControl;
