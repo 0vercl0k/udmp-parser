@@ -297,6 +297,7 @@ enum class StreamType_t : uint32_t {
   Unused = 0,
   ThreadList = 3,
   ModuleList = 4,
+  MemoryList = 5,
   Exception = 6,
   SystemInfo = 7,
   Memory64List = 9,
@@ -309,6 +310,12 @@ struct Directory_t {
 };
 
 static_assert(sizeof(Directory_t) == 0xC);
+
+struct MemoryListStreamHdr_t {
+  uint32_t NumberOfMemoryRanges = 0;
+};
+
+static_assert(sizeof(MemoryListStreamHdr_t) == 0x4);
 
 struct Memory64ListStreamHdr_t {
   uint64_t NumberOfMemoryRanges = 0;
@@ -921,9 +928,14 @@ public:
     //
 
     const dmp::StreamType_t Order[] = {
-        dmp::StreamType_t::SystemInfo,     dmp::StreamType_t::Exception,
-        dmp::StreamType_t::MemoryInfoList, dmp::StreamType_t::Memory64List,
-        dmp::StreamType_t::ThreadList,     dmp::StreamType_t::ModuleList};
+        dmp::StreamType_t::SystemInfo,
+        dmp::StreamType_t::Exception,
+        dmp::StreamType_t::MemoryInfoList,
+        dmp::StreamType_t::MemoryList,
+        dmp::StreamType_t::Memory64List,
+        dmp::StreamType_t::ThreadList,
+        dmp::StreamType_t::ModuleList
+    };
 
     for (const auto &Type : Order) {
 
@@ -1097,6 +1109,10 @@ private:
 
     case dmp::StreamType_t::MemoryInfoList: {
       return ParseMemoryInfoListStream(StreamDirectory);
+    }
+
+    case dmp::StreamType_t::MemoryList: {
+      return ParseMemoryListStream(StreamDirectory);
     }
 
     case dmp::StreamType_t::Memory64List: {
@@ -1414,6 +1430,92 @@ private:
     return true;
   }
 
+  bool ParseMemoryListStream(const dmp::Directory_t *StreamDirectory) {
+
+    //
+    // Verify that the MemoryList stream is big enough.
+    //
+
+    const auto MemoryList =
+        (dmp::MemoryListStreamHdr_t *)(FileMap_.ViewBase() +
+                                       StreamDirectory->Location.Rva);
+    if (StreamDirectory->Location.DataSize < sizeof(*MemoryList)) {
+      DbgPrintf("The MemoryList stream is too small.\n");
+      return false;
+    }
+
+    //
+    // Verify that the MemoryList stream is big enough for the array.
+    //
+
+    const auto Descriptor = (dmp::MemoryDescriptor_t *)(MemoryList + 1);
+    const auto NumberOfMemoryRanges = MemoryList->NumberOfMemoryRanges;
+    const uint64_t StreamSize =
+        sizeof(*MemoryList) + (NumberOfMemoryRanges * sizeof(*Descriptor));
+    if (StreamDirectory->Location.DataSize < StreamSize) {
+      DbgPrintf("The MemoryList stream is not right.\n");
+      return false;
+    }
+
+    //
+    // Iterate through the array.
+    //
+
+    for (uint32_t RangeIdx = 0; RangeIdx < NumberOfMemoryRanges; RangeIdx++) {
+
+      //
+      // Verify that the range's content is in bounds.
+      //
+
+      const auto CurrentDescriptor = &Descriptor[RangeIdx];
+      const auto CurrentData =
+          FileMap_.ViewBase() + CurrentDescriptor->Memory.Rva;
+      const auto StartOfMemoryRange = CurrentDescriptor->StartOfMemoryRange;
+      const size_t DataSize = size_t(CurrentDescriptor->Memory.DataSize);
+      if (!FileMap_.InBounds(CurrentData, DataSize)) {
+        DbgPrintf("The MemoryList memory content number %" PRIu32
+                  " has its data out-of-bounds.\n",
+                  RangeIdx);
+        return false;
+      }
+
+      //
+      // If we don't find an existing entry, we can save the memory region here,
+      // but the meta information will be invalid
+      //
+
+      auto It = Mem_.find(StartOfMemoryRange);
+      if (It == Mem_.end()) {
+        DbgPrintf("The memory region starting at %" PRIx64
+                  " does not exist in the map, the meta information will be "
+                  "invalid.\n",
+                  StartOfMemoryRange);
+
+        dmp::MemoryInfo_t MemInfo;
+        MemInfo.BaseAddress = StartOfMemoryRange;
+        MemInfo.RegionSize = DataSize;
+
+        auto Emplace = Mem_.try_emplace(StartOfMemoryRange, MemInfo);
+        if (!Emplace.second) {
+          DbgPrintf("The region %" PRIx64 " is already in the memory map.\n",
+                    CurrentData);
+          return false;
+        }
+
+        It = Emplace.first;
+      }
+
+      ////
+      //// Update the entry.
+      ////
+
+      It->second.Data = CurrentData;
+      It->second.DataSize = DataSize;
+    }
+
+    return true;
+  }
+
   bool ParseMemory64ListStream(const dmp::Directory_t *StreamDirectory) {
 
     //
@@ -1469,15 +1571,31 @@ private:
       }
 
       //
-      // If we don't find an existing entry, there is something funky going on.
+      // If we don't find an existing entry, we can save the memory region here,
+      // but the meta information will be invalid
       //
 
-      const auto &It = Mem_.find(StartOfMemoryRange);
+      auto It = Mem_.find(StartOfMemoryRange);
       if (It == Mem_.end()) {
         DbgPrintf("The memory region starting at %" PRIx64
-                  " does not exist in the map.\n",
+                  " does not exist in the map, the meta information will be "
+                  "invalid.\n",
                   StartOfMemoryRange);
-        return false;
+
+        dmp::MemoryInfo_t MemInfo;
+        MemInfo.BaseAddress = StartOfMemoryRange;
+        MemInfo.RegionSize = DataSize;
+
+        const auto Emplace =
+            Mem_.try_emplace(StartOfMemoryRange, MemInfo);
+
+        if (!Emplace.second) {
+          DbgPrintf("The region %" PRIx64 " is already in the memory map.\n",
+                    CurrentData);
+          return false;
+        }
+
+        It = Emplace.first;
       }
 
       //
