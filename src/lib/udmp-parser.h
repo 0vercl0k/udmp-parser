@@ -1000,14 +1000,12 @@ public:
   }
 
   const MemBlock_t *GetMemBlock(const uint64_t Address) const {
-    const auto &Res =
-        std::find_if(Mem_.begin(), Mem_.end(), [&](const auto &It) {
-          return Address >= It.first &&
-                 Address < (It.first + It.second.RegionSize);
-        });
-
-    if (Res != Mem_.end()) {
-      return &Res->second;
+    auto it = Mem_.upper_bound(Address);
+    if (it != Mem_.begin()) {
+      --it;
+      if (Address >= it->first && Address < it->first + it->second.RegionSize) {
+        return &it->second;
+      }
     }
 
     return nullptr;
