@@ -90,7 +90,7 @@ static void DbgPrintf(const char *Format, ...) {
 
 struct Version {
   static inline const uint16_t Major = 0;
-  static inline const uint16_t Minor = 4;
+  static inline const uint16_t Minor = 6;
   static inline const std::string Release = "";
 };
 

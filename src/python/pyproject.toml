@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "udmp-parser"
-version = "0.5.0"
+version = "0.6.0"
 description = "A Cross-Platform C++ parser library for Windows user minidumps."
 readme = "README.md"
 requires-python = ">=3.8"
@@ -13,6 +13,11 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Software Development :: Assemblers",
     "Natural Language :: English",
 ]
@@ -36,8 +41,8 @@ cmake.args = ["-DBUILD_PYTHON_PACKAGE:BOOL=ON"]
 
 [tool.cibuildwheel]
 build-verbosity = 1
-test-command = "pytest {project}/tests"
-test-requires = "pytest"
+skip = "cp37-* pp* *musllinux*"
+test-command = "pytest -vvv {project}/tests"
 
 [tool.cibuildwheel.macos.environment]
-MACOSX_DEPLOYMENT_TARGET = "10.14"
+MACOSX_DEPLOYMENT_TARGET = "10.15"
