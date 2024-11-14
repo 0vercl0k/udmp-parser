@@ -42,7 +42,7 @@ cmake.args = ["-DBUILD_PYTHON_PACKAGE:BOOL=ON"]
 [tool.cibuildwheel]
 build-verbosity = 1
 skip = "cp37-* pp* *musllinux*"
-test-command = "pytest -vvv {project}/tests"
+test-command = "pytest -vvv {project}/src/python/tests"
 
 [tool.cibuildwheel.macos.environment]
 MACOSX_DEPLOYMENT_TARGET = "10.15"

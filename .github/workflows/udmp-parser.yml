@@ -2,7 +2,6 @@ name: Builds
 
 on: [push, pull_request]
 
-
 jobs:
   parser:
     strategy:
@@ -24,7 +23,6 @@ jobs:
     runs-on: ${{ matrix.variant.os }}
     name: parser / ${{ matrix.variant.os }} / ${{ matrix.variant.generator }} / ${{ matrix.variant.arch }}
     env:
-      NB_CPU: 1
       CMAKE_FLAGS: "-DBUILD_PARSER:BOOL=ON -DBUILD_PYTHON_BINDING:BOOL=OFF"
       CMAKE_ARCH: ""
 
@@ -69,7 +67,7 @@ jobs:
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: parser-${{ matrix.variant.os }}.${{ matrix.variant.generator }}-${{ matrix.variant.arch }}.${{ matrix.variant.config }}
+        name: parser-${{ matrix.variant.os }}.${{ matrix.variant.generator }}-${{ matrix.variant.arch }}.${{ matrix.variant.config }}-${{ github.sha }}
         path: artifact/
 
   bindings:
