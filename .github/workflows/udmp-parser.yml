@@ -90,8 +90,6 @@ jobs:
 
     - name: Build / test wheels
       uses: pypa/cibuildwheel@v2.21.3
-      env:
-        CIBW_BEFORE_TEST: pip install -U -r {project}/src/python/tests/requirements.txt
       with:
         package-dir: ./src/python
 
