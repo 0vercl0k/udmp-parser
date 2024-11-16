@@ -33,7 +33,7 @@ generate_minidump = "udmp_parser.utils:generate_minidump_from_command_line"
 profile = "black"
 
 [tool.scikit-build]
-wheel.py-api = "cp312"
+wheel.py-api = "cp313"
 minimum-version = "0.4"
 build-dir = "build/{wheel_tag}"
 cmake.minimum-version = "3.20"
