@@ -695,7 +695,7 @@ struct MemBlock_t {
       : BaseAddress(Info_.BaseAddress), AllocationBase(Info_.AllocationBase),
         AllocationProtect(Info_.AllocationProtect),
         RegionSize(Info_.RegionSize), State(Info_.State),
-        Protect(Info_.Protect), Type(Info_.Type){};
+        Protect(Info_.Protect), Type(Info_.Type) {};
 
   std::string to_string() const {
     std::stringstream ss;
@@ -1000,12 +1000,16 @@ public:
   }
 
   const MemBlock_t *GetMemBlock(const uint64_t Address) const {
-    auto it = Mem_.upper_bound(Address);
-    if (it != Mem_.begin()) {
-      --it;
-      if (Address >= it->first && Address < it->first + it->second.RegionSize) {
-        return &it->second;
-      }
+    auto It = Mem_.upper_bound(Address);
+    if (It == Mem_.begin()) {
+      return nullptr;
+    }
+
+    It--;
+    const auto &[MemBlockAddress, MemBlock] = *It;
+    if (Address >= MemBlockAddress &&
+        Address < (MemBlockAddress + MemBlock.RegionSize)) {
+      return &MemBlock;
     }
 
     return nullptr;
