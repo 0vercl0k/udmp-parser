@@ -524,10 +524,11 @@ int main(int argc, char *argv[]) {
       //
 
       const auto BlockStart = Block->BaseAddress;
-      const auto BlockSize = Block->DataSize;
-      const auto BlockEnd = BlockStart + BlockSize;
+      const auto BlockDataSize = Block->DataSize;
+      const auto BlockRegionSize = Block->RegionSize;
+      const auto BlockEnd = BlockStart + BlockRegionSize;
       printf("%016" PRIx64 " -> %016" PRIx64 "\n", BlockStart, BlockEnd);
-      if (BlockSize > 0) {
+      if (BlockDataSize > 0) {
 
         //
         // Calculate where from we need to start dumping, and the appropriate
@@ -535,7 +536,7 @@ int main(int argc, char *argv[]) {
         //
 
         const auto OffsetFromStart = DumpAddress - BlockStart;
-        const auto Remaining = size_t(BlockSize - OffsetFromStart);
+        const auto Remaining = size_t(BlockDataSize - OffsetFromStart);
         const size_t MaxSize = 0x100;
         const size_t DumpSize = std::min(MaxSize, Remaining);
         utils::Hexdump(BlockStart + OffsetFromStart,

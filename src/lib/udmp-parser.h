@@ -90,7 +90,7 @@ static void DbgPrintf(const char *Format, ...) {
 
 struct Version {
   static inline const uint16_t Major = 0;
-  static inline const uint16_t Minor = 4;
+  static inline const uint16_t Minor = 6;
   static inline const std::string Release = "";
 };
 
@@ -695,7 +695,7 @@ struct MemBlock_t {
       : BaseAddress(Info_.BaseAddress), AllocationBase(Info_.AllocationBase),
         AllocationProtect(Info_.AllocationProtect),
         RegionSize(Info_.RegionSize), State(Info_.State),
-        Protect(Info_.Protect), Type(Info_.Type){};
+        Protect(Info_.Protect), Type(Info_.Type) {};
 
   std::string to_string() const {
     std::stringstream ss;
@@ -1000,14 +1000,16 @@ public:
   }
 
   const MemBlock_t *GetMemBlock(const uint64_t Address) const {
-    const auto &Res =
-        std::find_if(Mem_.begin(), Mem_.end(), [&](const auto &It) {
-          return Address >= It.first &&
-                 Address < (It.first + It.second.RegionSize);
-        });
+    auto It = Mem_.upper_bound(Address);
+    if (It == Mem_.begin()) {
+      return nullptr;
+    }
 
-    if (Res != Mem_.end()) {
-      return &Res->second;
+    It--;
+    const auto &[MemBlockAddress, MemBlock] = *It;
+    if (Address >= MemBlockAddress &&
+        Address < (MemBlockAddress + MemBlock.RegionSize)) {
+      return &MemBlock;
     }
 
     return nullptr;

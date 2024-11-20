@@ -6,6 +6,14 @@
 # With contribution from:
 # * hugsy - (github.com/hugsy)
 #
+cmake_minimum_required(VERSION 3.20)
+
+project(
+    udmp-parser-python
+    DESCRIPTION "A Cross-Platform C++ parser library for Windows user minidumps."
+    HOMEPAGE_URL https://github.com/0vercl0k/udmp-parser
+    VERSION 0.6.0
+)
 
 find_package(Python 3
     REQUIRED COMPONENTS Interpreter Development.Module
