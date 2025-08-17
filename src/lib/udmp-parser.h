@@ -441,6 +441,26 @@ static_assert(sizeof(ExceptionStream_t) == 0xa8);
 } // namespace dmp
 #pragma pack(pop)
 
+class MemoryView_t
+{
+    const void* Begin_ = nullptr;
+    const void* End_ = nullptr;
+
+public:
+    MemoryView_t() = default;
+    MemoryView_t(const void* Begin, const void* End)
+        : Begin_(Begin), End_(End) { }
+
+    constexpr uint8_t* ViewBase() const { return (uint8_t*)Begin_; }
+    constexpr uint8_t* ViewEnd() const { return (uint8_t*)End_; }
+
+    bool InBounds(const void* Ptr, const size_t Size = 1) const
+    {
+        const void* PtrEnd = (const uint8_t*)Ptr + Size;
+        return Ptr >= Begin_ && PtrEnd <= End_;
+    }
+};
+
 #if defined(WINDOWS)
 class FileMap_t {
   //
@@ -502,6 +522,7 @@ public:
   FileMap_t &operator=(const FileMap_t &) = delete;
 
   constexpr uint8_t *ViewBase() const { return (uint8_t *)ViewBase_; }
+  constexpr uint8_t *ViewEnd() const { return (uint8_t *)ViewEnd_; }
 
   bool MapFile(const char *PathFile) {
     bool Success = true;
@@ -645,6 +666,7 @@ public:
   FileMap_t &operator=(const FileMap_t &) = delete;
 
   constexpr uint8_t *ViewBase() const { return (uint8_t *)ViewBase_; }
+  constexpr uint8_t *ViewEnd() const { return (uint8_t *)ViewBase_ + ViewSize_; }
 
   bool MapFile(const char *PathFile) {
     Fd_ = open(PathFile, O_RDONLY);
@@ -778,12 +800,6 @@ struct Thread_t {
 class UserDumpParser {
 private:
   //
-  // The mapped file.
-  //
-
-  FileMap_t FileMap_;
-
-  //
   // The memory map; base address -> mem.
   //
 
@@ -828,17 +844,24 @@ public:
       return false;
     }
 
-    if (!FileMap_.MapFile(PathFile)) {
+    FileMap_t FileMap;
+    if (!FileMap.MapFile(PathFile)) {
       DbgPrintf("MapFile failed.\n");
       return false;
     }
+
+    MemoryView_t MemoryView(FileMap.ViewBase(), FileMap.ViewBase());
+    return Parse(MemoryView);
+  }
+
+  bool Parse(const MemoryView_t &FileView) {
 
     //
     // Verify that the mapped file is big enough to pull the headers.
     //
 
-    const auto Hdr = (dmp::Header_t *)FileMap_.ViewBase();
-    if (!FileMap_.InBounds(Hdr, sizeof(*Hdr))) {
+    const auto Hdr = (dmp::Header_t *)FileView.ViewBase();
+    if (!FileView.InBounds(Hdr, sizeof(*Hdr))) {
       DbgPrintf("The header are not in bounds.\n");
       return false;
     }
@@ -857,7 +880,7 @@ public:
     //
 
     const auto StreamDirectory =
-        (dmp::Directory_t *)(FileMap_.ViewBase() + Hdr->StreamDirectoryRva);
+        (dmp::Directory_t *)(FileView.ViewBase() + Hdr->StreamDirectoryRva);
 
     //
     // Verify that it is in bounds.
@@ -865,7 +888,7 @@ public:
 
     const auto StreamDirectorySize =
         Hdr->NumberOfStreams * sizeof(*StreamDirectory);
-    if (!FileMap_.InBounds(StreamDirectory, StreamDirectorySize)) {
+    if (!FileView.InBounds(StreamDirectory, StreamDirectorySize)) {
       DbgPrintf("The stream directories are out of the bounds of the file.\n");
       return false;
     }
@@ -885,8 +908,8 @@ public:
       // Verify that the stream content is in bounds.
       //
 
-      const auto StreamStart = FileMap_.ViewBase() + Rva;
-      if (!FileMap_.InBounds(StreamStart, DataSize)) {
+      const auto StreamStart = FileView.ViewBase() + Rva;
+      if (!FileView.InBounds(StreamStart, DataSize)) {
         DbgPrintf("The stream number %" PRIu32 " is out-of-bounds\n",
                   StreamIdx);
         return false;
@@ -940,7 +963,7 @@ public:
       // Parse the stream. If we don't have a result, it's unexpected.
       //
 
-      const auto &Result = ParseStream(Directory->second);
+      const auto &Result = ParseStream(FileView, Directory->second);
       if (!Result.has_value()) {
         DbgPrintf("Seems like there is a missing case for %" PRIu32
                   " in ParseStream?\n",
@@ -1082,7 +1105,7 @@ public:
   }
 
 private:
-  std::optional<bool> ParseStream(const dmp::Directory_t *StreamDirectory) {
+  std::optional<bool> ParseStream(const MemoryView_t &FileView, const dmp::Directory_t *StreamDirectory) {
 
     //
     // Parse a stream if we know how to.
@@ -1094,41 +1117,41 @@ private:
     }
 
     case dmp::StreamType_t::SystemInfo: {
-      return ParseSystemInfoStream(StreamDirectory);
+      return ParseSystemInfoStream(FileView, StreamDirectory);
     }
 
     case dmp::StreamType_t::MemoryInfoList: {
-      return ParseMemoryInfoListStream(StreamDirectory);
+      return ParseMemoryInfoListStream(FileView, StreamDirectory);
     }
 
     case dmp::StreamType_t::Memory64List: {
-      return ParseMemory64ListStream(StreamDirectory);
+      return ParseMemory64ListStream(FileView, StreamDirectory);
     }
 
     case dmp::StreamType_t::ModuleList: {
-      return ParseModuleListStream(StreamDirectory);
+      return ParseModuleListStream(FileView, StreamDirectory);
     }
 
     case dmp::StreamType_t::ThreadList: {
-      return ParseThreadListStream(StreamDirectory);
+      return ParseThreadListStream(FileView, StreamDirectory);
     }
 
     case dmp::StreamType_t::Exception: {
-      return ParseExceptionStream(StreamDirectory);
+      return ParseExceptionStream(FileView, StreamDirectory);
     }
     }
 
     return std::nullopt;
   }
 
-  bool ParseExceptionStream(const dmp::Directory_t *StreamDirectory) {
+  bool ParseExceptionStream(const MemoryView_t &FileView, const dmp::Directory_t *StreamDirectory) {
 
     //
     // Verify that the stream is big enough.
     //
 
     const auto Exception =
-        (dmp::ExceptionStream_t *)(FileMap_.ViewBase() +
+        (dmp::ExceptionStream_t *)(FileView.ViewBase() +
                                    StreamDirectory->Location.Rva);
 
     if (StreamDirectory->Location.DataSize < sizeof(*Exception)) {
@@ -1144,14 +1167,14 @@ private:
     return true;
   }
 
-  bool ParseSystemInfoStream(const dmp::Directory_t *StreamDirectory) {
+  bool ParseSystemInfoStream(const MemoryView_t &FileView, const dmp::Directory_t *StreamDirectory) {
 
     //
     // Verify that the stream is big enough.
     //
 
     const auto SystemInfos =
-        (dmp::SystemInfoStream_t *)(FileMap_.ViewBase() +
+        (dmp::SystemInfoStream_t *)(FileView.ViewBase() +
                                     StreamDirectory->Location.Rva);
     if (StreamDirectory->Location.DataSize < sizeof(*SystemInfos)) {
       DbgPrintf("The size of the SystemInfo stream is not right.\n");
@@ -1167,14 +1190,14 @@ private:
     return true;
   }
 
-  bool ParseThreadListStream(const dmp::Directory_t *StreamDirectory) {
+  bool ParseThreadListStream(const MemoryView_t &FileView, const dmp::Directory_t *StreamDirectory) {
 
     //
     // Verify that the stream is big enough to grab the number of threads.
     //
 
     const auto NumberOfThreadsPtr =
-        (uint32_t *)(FileMap_.ViewBase() + StreamDirectory->Location.Rva);
+        (uint32_t *)(FileView.ViewBase() + StreamDirectory->Location.Rva);
     if (StreamDirectory->Location.DataSize < sizeof(*NumberOfThreadsPtr)) {
       DbgPrintf("The size of the ThreadList stream is not right.\n");
       return false;
@@ -1204,9 +1227,9 @@ private:
 
       const auto CurrentThread = &Threads[ThreadIdx];
       const auto ThreadContext =
-          (void *)(FileMap_.ViewBase() + CurrentThread->ThreadContext.Rva);
+          (void *)(FileView.ViewBase() + CurrentThread->ThreadContext.Rva);
       const auto ThreadContextDataSize = CurrentThread->ThreadContext.DataSize;
-      if (!FileMap_.InBounds(ThreadContext, ThreadContextDataSize)) {
+      if (!FileView.InBounds(ThreadContext, ThreadContextDataSize)) {
         DbgPrintf("The thread context number %" PRIu32 " is out of bounds.\n",
                   ThreadIdx);
         return false;
@@ -1223,14 +1246,14 @@ private:
     return true;
   }
 
-  bool ParseMemoryInfoListStream(const dmp::Directory_t *StreamDirectory) {
+  bool ParseMemoryInfoListStream(const MemoryView_t &FileView, const dmp::Directory_t *StreamDirectory) {
 
     //
     // Verify that the stream is big enough.
     //
 
     const auto MemoryInfoList =
-        (dmp::MemoryInfoListStream_t *)(FileMap_.ViewBase() +
+        (dmp::MemoryInfoListStream_t *)(FileView.ViewBase() +
                                         StreamDirectory->Location.Rva);
     if (StreamDirectory->Location.DataSize < sizeof(*MemoryInfoList)) {
       DbgPrintf("The size of the MemoryInfoList stream is not right.\n");
@@ -1302,14 +1325,14 @@ private:
     return true;
   }
 
-  bool ParseModuleListStream(const dmp::Directory_t *StreamDirectory) {
+  bool ParseModuleListStream(const MemoryView_t &FileView, const dmp::Directory_t *StreamDirectory) {
 
     //
     // Verify that the stream is big enough to read the number of modules.
     //
 
     const auto NumberOfModulesPtr =
-        (uint32_t *)(FileMap_.ViewBase() + StreamDirectory->Location.Rva);
+        (uint32_t *)(FileView.ViewBase() + StreamDirectory->Location.Rva);
     if (StreamDirectory->Location.DataSize < sizeof(*NumberOfModulesPtr)) {
       DbgPrintf("The ModuleList stream is too small.\n");
       return false;
@@ -1335,14 +1358,14 @@ private:
     for (uint32_t ModuleIdx = 0; ModuleIdx < NumberOfModules; ModuleIdx++) {
       const auto CurrentModule = &Module[ModuleIdx];
       const auto NameLengthPtr =
-          (uint32_t *)(FileMap_.ViewBase() + CurrentModule->ModuleNameRva);
+          (uint32_t *)(FileView.ViewBase() + CurrentModule->ModuleNameRva);
       const size_t NameRecordLength = sizeof(*NameLengthPtr) + *NameLengthPtr;
 
       //
       // Verify that the record is in bounds.
       //
 
-      if (!FileMap_.InBounds(NameLengthPtr, NameRecordLength)) {
+      if (!FileView.InBounds(NameLengthPtr, NameRecordLength)) {
         DbgPrintf("The module name record is not in bounds.\n");
         return false;
       }
@@ -1382,9 +1405,9 @@ private:
       // Verify that the Cv record is in bounds.
       //
 
-      const auto CvRecord = FileMap_.ViewBase() + CurrentModule->CvRecord.Rva;
+      const auto CvRecord = FileView.ViewBase() + CurrentModule->CvRecord.Rva;
       const auto CvRecordSize = CurrentModule->CvRecord.DataSize;
-      if (!FileMap_.InBounds(CvRecord, CvRecordSize)) {
+      if (!FileView.InBounds(CvRecord, CvRecordSize)) {
         DbgPrintf("The Cv record of the module index %" PRIu32
                   " is not in bounds.\n",
                   ModuleIdx);
@@ -1396,9 +1419,9 @@ private:
       //
 
       const auto MiscRecord =
-          FileMap_.ViewBase() + CurrentModule->MiscRecord.Rva;
+          FileView.ViewBase() + CurrentModule->MiscRecord.Rva;
       const auto MiscRecordSize = CurrentModule->MiscRecord.DataSize;
-      if (!FileMap_.InBounds(MiscRecord, MiscRecordSize)) {
+      if (!FileView.InBounds(MiscRecord, MiscRecordSize)) {
         DbgPrintf("The Misc record of the module index %" PRIu32
                   " is not in bounds.\n",
                   ModuleIdx);
@@ -1416,14 +1439,14 @@ private:
     return true;
   }
 
-  bool ParseMemory64ListStream(const dmp::Directory_t *StreamDirectory) {
+  bool ParseMemory64ListStream(const MemoryView_t &FileView, const dmp::Directory_t *StreamDirectory) {
 
     //
     // Verify that the Memory64List stream is big enough.
     //
 
     const auto Memory64List =
-        (dmp::Memory64ListStreamHdr_t *)(FileMap_.ViewBase() +
+        (dmp::Memory64ListStreamHdr_t *)(FileView.ViewBase() +
                                          StreamDirectory->Location.Rva);
     if (StreamDirectory->Location.DataSize < sizeof(*Memory64List)) {
       DbgPrintf("The Memory64List stream is too small.\n");
@@ -1448,7 +1471,7 @@ private:
     // at.
     //
 
-    auto CurrentData = FileMap_.ViewBase() + Memory64List->BaseRva;
+    auto CurrentData = FileView.ViewBase() + Memory64List->BaseRva;
 
     //
     // Iterate through the array.
@@ -1463,7 +1486,7 @@ private:
       const auto CurrentDescriptor = &Descriptor[RangeIdx];
       const auto StartOfMemoryRange = CurrentDescriptor->StartOfMemoryRange;
       const size_t DataSize = size_t(CurrentDescriptor->DataSize);
-      if (!FileMap_.InBounds(CurrentData, DataSize)) {
+      if (!FileView.InBounds(CurrentData, DataSize)) {
         DbgPrintf("The Memory64List memory content number %" PRIu32
                   " has its data out-of-bounds.\n",
                   RangeIdx);
