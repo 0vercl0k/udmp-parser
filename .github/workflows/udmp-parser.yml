@@ -9,9 +9,9 @@ jobs:
       matrix:
         variant:
           # Available runners: https://github.com/actions/runner-images
-          - {os: windows-2019,        generator: msvc,    arch: x64,      config: RelWithDebInfo, }
-          - {os: windows-2019,        generator: msvc,    arch: win32,    config: RelWithDebInfo, }
-          - {os: windows-2019,        generator: msvc,    arch: arm64,    config: RelWithDebInfo, }
+          - {os: windows-2025,        generator: msvc,    arch: x64,      config: RelWithDebInfo, }
+          - {os: windows-2025,        generator: msvc,    arch: win32,    config: RelWithDebInfo, }
+          - {os: windows-2025,        generator: msvc,    arch: arm64,    config: RelWithDebInfo, }
           - {os: ubuntu-22.04,        generator: gcc,     arch: x64,      config: RelWithDebInfo, }
           - {os: ubuntu-22.04,        generator: clang,   arch: x64,      config: RelWithDebInfo, }
           - {os: ubuntu-24.04,        generator: gcc,     arch: x64,      config: RelWithDebInfo, }
@@ -31,7 +31,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Environment Setup (Windows)
-      if: matrix.variant.os == 'windows-2019'
+      if: matrix.variant.os == 'windows-2025'
       run: |
         Import-Module .\.github\Invoke-VisualStudio.ps1
         Invoke-VisualStudio2022${{ matrix.variant.arch }}
@@ -76,7 +76,7 @@ jobs:
       matrix:
         variant:
           # Available runners: https://github.com/actions/runner-images
-          - {os: windows-2019, config: RelWithDebInfo }
+          - {os: windows-2025, config: RelWithDebInfo }
           - {os: ubuntu-22.04, config: RelWithDebInfo }
           # most up to date free intel based osx?
           - {os: macos-13, config: Release }
