@@ -15,6 +15,7 @@
 #include <unordered_map>
 #include <variant>
 #include <vector>
+#include <memory>
 
 namespace fs = std::filesystem;
 
@@ -441,28 +442,38 @@ static_assert(sizeof(ExceptionStream_t) == 0xa8);
 } // namespace dmp
 #pragma pack(pop)
 
-class MemoryView_t
-{
-    const void* Begin_ = nullptr;
-    const void* End_ = nullptr;
+class MemoryView_t {
+protected:
+  //
+  // Base address of the file view.
+  //
+  const void *ViewBase_ = nullptr;
+
+  //
+  // The end of the view - points right *after* the last byte.
+  //
+  const void *ViewEnd_ = nullptr;
 
 public:
-    MemoryView_t() = default;
-    MemoryView_t(const void* Begin, const void* End)
-        : Begin_(Begin), End_(End) { }
+  MemoryView_t() = default;
+  virtual ~MemoryView_t() = default;
+  MemoryView_t(const void *Base, const void *End)
+      : ViewBase_(Base), ViewEnd_(End) {}
+  MemoryView_t(const MemoryView_t &) = delete;
+  MemoryView_t &operator=(const MemoryView_t &) = delete;
 
-    constexpr uint8_t* ViewBase() const { return (uint8_t*)Begin_; }
-    constexpr uint8_t* ViewEnd() const { return (uint8_t*)End_; }
+  constexpr uint8_t *ViewBase() const { return (uint8_t *)ViewBase_; }
+  constexpr uint8_t *ViewEnd() const { return (uint8_t *)ViewEnd_; }
+  constexpr size_t ViewSize() const { return ViewEnd() - ViewBase(); }
 
-    bool InBounds(const void* Ptr, const size_t Size = 1) const
-    {
-        const void* PtrEnd = (const uint8_t*)Ptr + Size;
-        return Ptr >= Begin_ && PtrEnd <= End_;
-    }
+  bool InBounds(const void *Ptr, const size_t Size = 1) const {
+    const void *PtrEnd = (const uint8_t *)Ptr + Size;
+    return Ptr >= ViewBase_ && PtrEnd <= ViewEnd_;
+  }
 };
 
 #if defined(WINDOWS)
-class FileMap_t {
+class FileMap_t : public MemoryView_t {
   //
   // Handle to the input file.
   //
@@ -474,18 +485,6 @@ class FileMap_t {
   //
 
   HANDLE FileMap_ = nullptr;
-
-  //
-  // Base address of the file view.
-  //
-
-  PVOID ViewBase_ = nullptr;
-
-  //
-  // The end of the view - points right *after* the last byte.
-  //
-
-  PVOID ViewEnd_ = nullptr;
 
 public:
   ~FileMap_t() {
@@ -516,13 +515,6 @@ public:
       File_ = nullptr;
     }
   }
-
-  FileMap_t() = default;
-  FileMap_t(const FileMap_t &) = delete;
-  FileMap_t &operator=(const FileMap_t &) = delete;
-
-  constexpr uint8_t *ViewBase() const { return (uint8_t *)ViewBase_; }
-  constexpr uint8_t *ViewEnd() const { return (uint8_t *)ViewEnd_; }
 
   bool MapFile(const char *PathFile) {
     bool Success = true;
@@ -633,26 +625,19 @@ public:
 
     return Success;
   }
-
-  bool InBounds(const void *Ptr, const size_t Size = 1) {
-    const void *EndPtr = (uint8_t *)Ptr + Size;
-    return Ptr >= ViewBase_ && EndPtr <= ViewEnd_;
-  }
 };
 
 #elif defined(LINUX)
 
-class FileMap_t {
-  void *ViewBase_ = nullptr;
-  off_t ViewSize_ = 0;
+class FileMap_t : public MemoryView_t {
   int Fd_ = -1;
 
 public:
   ~FileMap_t() {
     if (ViewBase_) {
-      munmap(ViewBase_, ViewSize_);
+      munmap((void *)ViewBase_, ViewSize());
       ViewBase_ = nullptr;
-      ViewSize_ = 0;
+      ViewEnd_ = nullptr;
     }
 
     if (Fd_ != -1) {
@@ -660,13 +645,6 @@ public:
       Fd_ = -1;
     }
   }
-
-  FileMap_t() = default;
-  FileMap_t(const FileMap_t &) = delete;
-  FileMap_t &operator=(const FileMap_t &) = delete;
-
-  constexpr uint8_t *ViewBase() const { return (uint8_t *)ViewBase_; }
-  constexpr uint8_t *ViewEnd() const { return (uint8_t *)ViewBase_ + ViewSize_; }
 
   bool MapFile(const char *PathFile) {
     Fd_ = open(PathFile, O_RDONLY);
@@ -681,20 +659,14 @@ public:
       return false;
     }
 
-    ViewSize_ = Stat.st_size;
-    ViewBase_ = mmap(nullptr, ViewSize_, PROT_READ, MAP_SHARED, Fd_, 0);
+    ViewBase_ = mmap(nullptr, Stat.st_size, PROT_READ, MAP_SHARED, Fd_, 0);
     if (ViewBase_ == MAP_FAILED) {
       perror("Could not mmap");
       return false;
     }
+    ViewEnd_ = (uint8_t *)ViewBase_ + Stat.st_size;
 
     return true;
-  }
-
-  bool InBounds(const void *Ptr, const size_t Size = 1) {
-    const void *ViewEnd = (uint8_t *)ViewBase_ + ViewSize_;
-    const void *PtrEnd = (uint8_t *)Ptr + Size;
-    return Ptr >= ViewBase_ && PtrEnd <= ViewEnd;
   }
 };
 
@@ -829,6 +801,12 @@ private:
 
   std::unordered_map<uint32_t, Thread_t> Threads_;
 
+  //
+  // Memory view of the dump file.
+  //
+
+  std::shared_ptr<MemoryView_t> FileView_;
+
 public:
   //
   // Parse the file.
@@ -844,176 +822,32 @@ public:
       return false;
     }
 
-    FileMap_t FileMap;
-    if (!FileMap.MapFile(PathFile)) {
+    auto FileMap = std::make_shared<FileMap_t>();
+    if (!FileMap->MapFile(PathFile)) {
       DbgPrintf("MapFile failed.\n");
       return false;
     }
+    FileView_ = std::move(FileMap);
 
-    MemoryView_t MemoryView(FileMap.ViewBase(), FileMap.ViewBase());
-    return Parse(MemoryView);
-  }
-
-  bool Parse(const MemoryView_t &FileView) {
-
-    //
-    // Verify that the mapped file is big enough to pull the headers.
-    //
-
-    const auto Hdr = (dmp::Header_t *)FileView.ViewBase();
-    if (!FileView.InBounds(Hdr, sizeof(*Hdr))) {
-      DbgPrintf("The header are not in bounds.\n");
-      return false;
-    }
-
-    //
-    // Verify that the header looks sane.
-    //
-
-    if (!Hdr->LooksGood()) {
-      DbgPrintf("The header looks wrong.\n");
-      return false;
-    }
-
-    //
-    // Get a pointer to the base of the stream directory.
-    //
-
-    const auto StreamDirectory =
-        (dmp::Directory_t *)(FileView.ViewBase() + Hdr->StreamDirectoryRva);
-
-    //
-    // Verify that it is in bounds.
-    //
-
-    const auto StreamDirectorySize =
-        Hdr->NumberOfStreams * sizeof(*StreamDirectory);
-    if (!FileView.InBounds(StreamDirectory, StreamDirectorySize)) {
-      DbgPrintf("The stream directories are out of the bounds of the file.\n");
-      return false;
-    }
-
-    //
-    // Iterate through the directories.
-    //
-
-    std::unordered_map<dmp::StreamType_t, dmp::Directory_t *> Directories;
-    for (uint32_t StreamIdx = 0; StreamIdx < Hdr->NumberOfStreams;
-         StreamIdx++) {
-      const auto CurrentStreamDirectory = &StreamDirectory[StreamIdx];
-      const auto Rva = CurrentStreamDirectory->Location.Rva;
-      const auto DataSize = CurrentStreamDirectory->Location.DataSize;
-
-      //
-      // Verify that the stream content is in bounds.
-      //
-
-      const auto StreamStart = FileView.ViewBase() + Rva;
-      if (!FileView.InBounds(StreamStart, DataSize)) {
-        DbgPrintf("The stream number %" PRIu32 " is out-of-bounds\n",
-                  StreamIdx);
-        return false;
-      }
-
-      //
-      // Skip unused streams because there are several of them.
-      //
-
-      if (CurrentStreamDirectory->StreamType == dmp::StreamType_t::Unused) {
-        continue;
-      }
-
-      //
-      // Keep track of the stream. If we've already seen a stream, fail as I
-      // don't think it's expected.
-      //
-
-      const auto &[_, Inserted] = Directories.try_emplace(
-          CurrentStreamDirectory->StreamType, CurrentStreamDirectory);
-
-      if (!Inserted) {
-        DbgPrintf("There are more than one stream of type %" PRIu32 "\n",
-                  uint32_t(CurrentStreamDirectory->StreamType));
-        return false;
-      }
-    }
-
-    //
-    // We parse stream in a specific order; it's not strictly necessary but it
-    // makes some code a bit simpler to write.
-    //
-
-    const dmp::StreamType_t Order[] = {
-        dmp::StreamType_t::SystemInfo,     dmp::StreamType_t::Exception,
-        dmp::StreamType_t::MemoryInfoList, dmp::StreamType_t::Memory64List,
-        dmp::StreamType_t::ThreadList,     dmp::StreamType_t::ModuleList};
-
-    for (const auto &Type : Order) {
-
-      //
-      // Check if we have encountered this stream. If not, let's go to the next.
-      //
-
-      const auto &Directory = Directories.find(Type);
-      if (Directory == Directories.end()) {
-        continue;
-      }
-
-      //
-      // Parse the stream. If we don't have a result, it's unexpected.
-      //
-
-      const auto &Result = ParseStream(FileView, Directory->second);
-      if (!Result.has_value()) {
-        DbgPrintf("Seems like there is a missing case for %" PRIu32
-                  " in ParseStream?\n",
-                  uint32_t(Type));
-        return false;
-      }
-
-      //
-      // If the parsing failed, it is unexpected as well.
-      //
-
-      if (!*Result) {
-        DbgPrintf("Failed to parse stream %" PRIu32 ".\n", uint32_t(Type));
-        return false;
-      }
-    }
-
-    //
-    // We are done with this guy.
-    //
-
-    Directories.clear();
-
-    //
-    // If there's no information regarding the foreground thread, then we're
-    // done.
-    //
-
-    if (!ForegroundThreadId_) {
-      return true;
-    }
-
-    //
-    // If we have a foreground thread id, let's make sure it exists in the list
-    // of threads. If it doesn't let's fail.
-    //
-
-    const bool ForegroundThreadExists =
-        Threads_.find(*ForegroundThreadId_) != Threads_.end();
-    if (!ForegroundThreadExists) {
-      DbgPrintf("The Exception stream referenced a thread id that does not "
-                "exist in the thread list.\n");
-      return false;
-    }
-
-    return true;
+    return Parse();
   }
 
   bool Parse(const fs::path &PathFile) {
     return Parse(PathFile.string().c_str());
+  }
+
+  //
+  // Parse from memory view.
+  //
+
+  bool Parse(std::shared_ptr<MemoryView_t> FileView) {
+    if (!FileView) {
+      DbgPrintf("The memory view passed is null.\n");
+      return false;
+    }
+    FileView_ = std::move(FileView);
+
+    return Parse();
   }
 
   const std::map<uint64_t, MemBlock_t> &GetMem() const { return Mem_; }
@@ -1105,7 +939,165 @@ public:
   }
 
 private:
-  std::optional<bool> ParseStream(const MemoryView_t &FileView, const dmp::Directory_t *StreamDirectory) {
+  bool Parse() {
+
+    //
+    // Verify that the mapped file is big enough to pull the headers.
+    //
+
+    const auto Hdr = (dmp::Header_t *)FileView_->ViewBase();
+    if (!FileView_->InBounds(Hdr, sizeof(*Hdr))) {
+      DbgPrintf("The header are not in bounds.\n");
+      return false;
+    }
+
+    //
+    // Verify that the header looks sane.
+    //
+
+    if (!Hdr->LooksGood()) {
+      DbgPrintf("The header looks wrong.\n");
+      return false;
+    }
+
+    //
+    // Get a pointer to the base of the stream directory.
+    //
+
+    const auto StreamDirectory =
+        (dmp::Directory_t *)(FileView_->ViewBase() + Hdr->StreamDirectoryRva);
+
+    //
+    // Verify that it is in bounds.
+    //
+
+    const auto StreamDirectorySize =
+        Hdr->NumberOfStreams * sizeof(*StreamDirectory);
+    if (!FileView_->InBounds(StreamDirectory, StreamDirectorySize)) {
+      DbgPrintf("The stream directories are out of the bounds of the file.\n");
+      return false;
+    }
+
+    //
+    // Iterate through the directories.
+    //
+
+    std::unordered_map<dmp::StreamType_t, dmp::Directory_t *> Directories;
+    for (uint32_t StreamIdx = 0; StreamIdx < Hdr->NumberOfStreams;
+         StreamIdx++) {
+      const auto CurrentStreamDirectory = &StreamDirectory[StreamIdx];
+      const auto Rva = CurrentStreamDirectory->Location.Rva;
+      const auto DataSize = CurrentStreamDirectory->Location.DataSize;
+
+      //
+      // Verify that the stream content is in bounds.
+      //
+
+      const auto StreamStart = FileView_->ViewBase() + Rva;
+      if (!FileView_->InBounds(StreamStart, DataSize)) {
+        DbgPrintf("The stream number %" PRIu32 " is out-of-bounds\n",
+                  StreamIdx);
+        return false;
+      }
+
+      //
+      // Skip unused streams because there are several of them.
+      //
+
+      if (CurrentStreamDirectory->StreamType == dmp::StreamType_t::Unused) {
+        continue;
+      }
+
+      //
+      // Keep track of the stream. If we've already seen a stream, fail as I
+      // don't think it's expected.
+      //
+
+      const auto &[_, Inserted] = Directories.try_emplace(
+          CurrentStreamDirectory->StreamType, CurrentStreamDirectory);
+
+      if (!Inserted) {
+        DbgPrintf("There are more than one stream of type %" PRIu32 "\n",
+                  uint32_t(CurrentStreamDirectory->StreamType));
+        return false;
+      }
+    }
+
+    //
+    // We parse stream in a specific order; it's not strictly necessary but it
+    // makes some code a bit simpler to write.
+    //
+
+    const dmp::StreamType_t Order[] = {
+        dmp::StreamType_t::SystemInfo,     dmp::StreamType_t::Exception,
+        dmp::StreamType_t::MemoryInfoList, dmp::StreamType_t::Memory64List,
+        dmp::StreamType_t::ThreadList,     dmp::StreamType_t::ModuleList};
+
+    for (const auto &Type : Order) {
+
+      //
+      // Check if we have encountered this stream. If not, let's go to the next.
+      //
+
+      const auto &Directory = Directories.find(Type);
+      if (Directory == Directories.end()) {
+        continue;
+      }
+
+      //
+      // Parse the stream. If we don't have a result, it's unexpected.
+      //
+
+      const auto &Result = ParseStream(Directory->second);
+      if (!Result.has_value()) {
+        DbgPrintf("Seems like there is a missing case for %" PRIu32
+                  " in ParseStream?\n",
+                  uint32_t(Type));
+        return false;
+      }
+
+      //
+      // If the parsing failed, it is unexpected as well.
+      //
+
+      if (!*Result) {
+        DbgPrintf("Failed to parse stream %" PRIu32 ".\n", uint32_t(Type));
+        return false;
+      }
+    }
+
+    //
+    // We are done with this guy.
+    //
+
+    Directories.clear();
+
+    //
+    // If there's no information regarding the foreground thread, then we're
+    // done.
+    //
+
+    if (!ForegroundThreadId_) {
+      return true;
+    }
+
+    //
+    // If we have a foreground thread id, let's make sure it exists in the list
+    // of threads. If it doesn't let's fail.
+    //
+
+    const bool ForegroundThreadExists =
+        Threads_.find(*ForegroundThreadId_) != Threads_.end();
+    if (!ForegroundThreadExists) {
+      DbgPrintf("The Exception stream referenced a thread id that does not "
+                "exist in the thread list.\n");
+      return false;
+    }
+
+    return true;
+  }
+
+  std::optional<bool> ParseStream(const dmp::Directory_t *StreamDirectory) {
 
     //
     // Parse a stream if we know how to.
@@ -1117,41 +1109,41 @@ private:
     }
 
     case dmp::StreamType_t::SystemInfo: {
-      return ParseSystemInfoStream(FileView, StreamDirectory);
+      return ParseSystemInfoStream(StreamDirectory);
     }
 
     case dmp::StreamType_t::MemoryInfoList: {
-      return ParseMemoryInfoListStream(FileView, StreamDirectory);
+      return ParseMemoryInfoListStream(StreamDirectory);
     }
 
     case dmp::StreamType_t::Memory64List: {
-      return ParseMemory64ListStream(FileView, StreamDirectory);
+      return ParseMemory64ListStream(StreamDirectory);
     }
 
     case dmp::StreamType_t::ModuleList: {
-      return ParseModuleListStream(FileView, StreamDirectory);
+      return ParseModuleListStream(StreamDirectory);
     }
 
     case dmp::StreamType_t::ThreadList: {
-      return ParseThreadListStream(FileView, StreamDirectory);
+      return ParseThreadListStream(StreamDirectory);
     }
 
     case dmp::StreamType_t::Exception: {
-      return ParseExceptionStream(FileView, StreamDirectory);
+      return ParseExceptionStream(StreamDirectory);
     }
     }
 
     return std::nullopt;
   }
 
-  bool ParseExceptionStream(const MemoryView_t &FileView, const dmp::Directory_t *StreamDirectory) {
+  bool ParseExceptionStream(const dmp::Directory_t *StreamDirectory) {
 
     //
     // Verify that the stream is big enough.
     //
 
     const auto Exception =
-        (dmp::ExceptionStream_t *)(FileView.ViewBase() +
+        (dmp::ExceptionStream_t *)(FileView_->ViewBase() +
                                    StreamDirectory->Location.Rva);
 
     if (StreamDirectory->Location.DataSize < sizeof(*Exception)) {
@@ -1167,14 +1159,14 @@ private:
     return true;
   }
 
-  bool ParseSystemInfoStream(const MemoryView_t &FileView, const dmp::Directory_t *StreamDirectory) {
+  bool ParseSystemInfoStream(const dmp::Directory_t *StreamDirectory) {
 
     //
     // Verify that the stream is big enough.
     //
 
     const auto SystemInfos =
-        (dmp::SystemInfoStream_t *)(FileView.ViewBase() +
+        (dmp::SystemInfoStream_t *)(FileView_->ViewBase() +
                                     StreamDirectory->Location.Rva);
     if (StreamDirectory->Location.DataSize < sizeof(*SystemInfos)) {
       DbgPrintf("The size of the SystemInfo stream is not right.\n");
@@ -1190,14 +1182,14 @@ private:
     return true;
   }
 
-  bool ParseThreadListStream(const MemoryView_t &FileView, const dmp::Directory_t *StreamDirectory) {
+  bool ParseThreadListStream(const dmp::Directory_t *StreamDirectory) {
 
     //
     // Verify that the stream is big enough to grab the number of threads.
     //
 
     const auto NumberOfThreadsPtr =
-        (uint32_t *)(FileView.ViewBase() + StreamDirectory->Location.Rva);
+        (uint32_t *)(FileView_->ViewBase() + StreamDirectory->Location.Rva);
     if (StreamDirectory->Location.DataSize < sizeof(*NumberOfThreadsPtr)) {
       DbgPrintf("The size of the ThreadList stream is not right.\n");
       return false;
@@ -1227,9 +1219,9 @@ private:
 
       const auto CurrentThread = &Threads[ThreadIdx];
       const auto ThreadContext =
-          (void *)(FileView.ViewBase() + CurrentThread->ThreadContext.Rva);
+          (void *)(FileView_->ViewBase() + CurrentThread->ThreadContext.Rva);
       const auto ThreadContextDataSize = CurrentThread->ThreadContext.DataSize;
-      if (!FileView.InBounds(ThreadContext, ThreadContextDataSize)) {
+      if (!FileView_->InBounds(ThreadContext, ThreadContextDataSize)) {
         DbgPrintf("The thread context number %" PRIu32 " is out of bounds.\n",
                   ThreadIdx);
         return false;
@@ -1246,14 +1238,14 @@ private:
     return true;
   }
 
-  bool ParseMemoryInfoListStream(const MemoryView_t &FileView, const dmp::Directory_t *StreamDirectory) {
+  bool ParseMemoryInfoListStream(const dmp::Directory_t *StreamDirectory) {
 
     //
     // Verify that the stream is big enough.
     //
 
     const auto MemoryInfoList =
-        (dmp::MemoryInfoListStream_t *)(FileView.ViewBase() +
+        (dmp::MemoryInfoListStream_t *)(FileView_->ViewBase() +
                                         StreamDirectory->Location.Rva);
     if (StreamDirectory->Location.DataSize < sizeof(*MemoryInfoList)) {
       DbgPrintf("The size of the MemoryInfoList stream is not right.\n");
@@ -1325,14 +1317,14 @@ private:
     return true;
   }
 
-  bool ParseModuleListStream(const MemoryView_t &FileView, const dmp::Directory_t *StreamDirectory) {
+  bool ParseModuleListStream(const dmp::Directory_t *StreamDirectory) {
 
     //
     // Verify that the stream is big enough to read the number of modules.
     //
 
     const auto NumberOfModulesPtr =
-        (uint32_t *)(FileView.ViewBase() + StreamDirectory->Location.Rva);
+        (uint32_t *)(FileView_->ViewBase() + StreamDirectory->Location.Rva);
     if (StreamDirectory->Location.DataSize < sizeof(*NumberOfModulesPtr)) {
       DbgPrintf("The ModuleList stream is too small.\n");
       return false;
@@ -1358,14 +1350,14 @@ private:
     for (uint32_t ModuleIdx = 0; ModuleIdx < NumberOfModules; ModuleIdx++) {
       const auto CurrentModule = &Module[ModuleIdx];
       const auto NameLengthPtr =
-          (uint32_t *)(FileView.ViewBase() + CurrentModule->ModuleNameRva);
+          (uint32_t *)(FileView_->ViewBase() + CurrentModule->ModuleNameRva);
       const size_t NameRecordLength = sizeof(*NameLengthPtr) + *NameLengthPtr;
 
       //
       // Verify that the record is in bounds.
       //
 
-      if (!FileView.InBounds(NameLengthPtr, NameRecordLength)) {
+      if (!FileView_->InBounds(NameLengthPtr, NameRecordLength)) {
         DbgPrintf("The module name record is not in bounds.\n");
         return false;
       }
@@ -1405,9 +1397,9 @@ private:
       // Verify that the Cv record is in bounds.
       //
 
-      const auto CvRecord = FileView.ViewBase() + CurrentModule->CvRecord.Rva;
+      const auto CvRecord = FileView_->ViewBase() + CurrentModule->CvRecord.Rva;
       const auto CvRecordSize = CurrentModule->CvRecord.DataSize;
-      if (!FileView.InBounds(CvRecord, CvRecordSize)) {
+      if (!FileView_->InBounds(CvRecord, CvRecordSize)) {
         DbgPrintf("The Cv record of the module index %" PRIu32
                   " is not in bounds.\n",
                   ModuleIdx);
@@ -1419,9 +1411,9 @@ private:
       //
 
       const auto MiscRecord =
-          FileView.ViewBase() + CurrentModule->MiscRecord.Rva;
+          FileView_->ViewBase() + CurrentModule->MiscRecord.Rva;
       const auto MiscRecordSize = CurrentModule->MiscRecord.DataSize;
-      if (!FileView.InBounds(MiscRecord, MiscRecordSize)) {
+      if (!FileView_->InBounds(MiscRecord, MiscRecordSize)) {
         DbgPrintf("The Misc record of the module index %" PRIu32
                   " is not in bounds.\n",
                   ModuleIdx);
@@ -1439,14 +1431,14 @@ private:
     return true;
   }
 
-  bool ParseMemory64ListStream(const MemoryView_t &FileView, const dmp::Directory_t *StreamDirectory) {
+  bool ParseMemory64ListStream(const dmp::Directory_t *StreamDirectory) {
 
     //
     // Verify that the Memory64List stream is big enough.
     //
 
     const auto Memory64List =
-        (dmp::Memory64ListStreamHdr_t *)(FileView.ViewBase() +
+        (dmp::Memory64ListStreamHdr_t *)(FileView_->ViewBase() +
                                          StreamDirectory->Location.Rva);
     if (StreamDirectory->Location.DataSize < sizeof(*Memory64List)) {
       DbgPrintf("The Memory64List stream is too small.\n");
@@ -1471,7 +1463,7 @@ private:
     // at.
     //
 
-    auto CurrentData = FileView.ViewBase() + Memory64List->BaseRva;
+    auto CurrentData = FileView_->ViewBase() + Memory64List->BaseRva;
 
     //
     // Iterate through the array.
@@ -1486,7 +1478,7 @@ private:
       const auto CurrentDescriptor = &Descriptor[RangeIdx];
       const auto StartOfMemoryRange = CurrentDescriptor->StartOfMemoryRange;
       const size_t DataSize = size_t(CurrentDescriptor->DataSize);
-      if (!FileView.InBounds(CurrentData, DataSize)) {
+      if (!FileView_->InBounds(CurrentData, DataSize)) {
         DbgPrintf("The Memory64List memory content number %" PRIu32
                   " has its data out-of-bounds.\n",
                   RangeIdx);
