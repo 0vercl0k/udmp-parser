@@ -19,8 +19,10 @@ endif()
 
 target_link_libraries(parser PRIVATE udmp-parser)
 
-install(FILES $<TARGET_FILE:parser> DESTINATION bin)
+if(UDMP_PARSER_INSTALL)
+    install(FILES $<TARGET_FILE:parser> DESTINATION bin)
 
-if(MSVC)
-    install(FILES $<TARGET_PDB_FILE:parser> DESTINATION bin OPTIONAL)
-endif(MSVC)
+    if(MSVC)
+        install(FILES $<TARGET_PDB_FILE:parser> DESTINATION bin OPTIONAL)
+    endif(MSVC)
+endif()

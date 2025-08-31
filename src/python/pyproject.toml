@@ -36,8 +36,7 @@ profile = "black"
 wheel.py-api = "cp313"
 minimum-version = "0.4"
 build-dir = "build/{wheel_tag}"
-cmake.minimum-version = "3.20"
-cmake.args = ["-DBUILD_PYTHON_PACKAGE:BOOL=ON"]
+cmake.minimum-version = "3.21"
 
 [tool.cibuildwheel]
 build-verbosity = 1

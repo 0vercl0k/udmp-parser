@@ -2,4 +2,10 @@
 add_library(udmp-parser INTERFACE)
 target_include_directories(udmp-parser INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 
-install(FILES $<TARGET_PROPERTY:udmp-parser,INTERFACE_INCLUDE_DIRECTORIES>/udmp-parser.h DESTINATION inc)
+if(WIN32)
+    target_compile_definitions(udmp-parser INTERFACE NOMINMAX)
+endif()
+
+if(UDMP_PARSER_INSTALL)
+    install(FILES $<TARGET_PROPERTY:udmp-parser,INTERFACE_INCLUDE_DIRECTORIES>/udmp-parser.h DESTINATION inc)
+endif(UDMP_PARSER_INSTALL)
