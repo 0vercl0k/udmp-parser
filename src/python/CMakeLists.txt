@@ -6,7 +6,7 @@
 # With contribution from:
 # * hugsy - (github.com/hugsy)
 #
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.21)
 
 project(
     udmp-parser-python
@@ -14,6 +14,10 @@ project(
     HOMEPAGE_URL https://github.com/0vercl0k/udmp-parser
     VERSION 0.6.0
 )
+
+if(NOT PROJECT_IS_TOP_LEVEL)
+    message(FATAL_ERROR "This project is not intended to be used as a sub-project")
+endif()
 
 find_package(Python 3
     REQUIRED COMPONENTS Interpreter Development.Module
@@ -40,24 +44,12 @@ if(MSVC)
     target_link_libraries(udmp_parser PRIVATE DbgHelp.lib)
 endif(MSVC)
 
-if(BUILD_PYTHON_PACKAGE)
-    #
-    # Those directives are only used when creating a standalone `udmp_parser` python package
-    #
-    target_include_directories(udmp_parser PRIVATE ../lib)
-    install(TARGETS udmp_parser LIBRARY DESTINATION .)
-    install(DIRECTORY udmp_parser-stubs DESTINATION .)
-else()
-    #
-    # This is the general case, when built from the root cmakefile
-    #
-    target_include_directories(udmp_parser PRIVATE $<TARGET_PROPERTY:udmp-parser,INTERFACE_INCLUDE_DIRECTORIES>)
-    install(TARGETS udmp_parser DESTINATION bindings/python)
-
-    if(MSVC)
-        install(FILES $<TARGET_PDB_FILE:udmp_parser> DESTINATION bindings/python OPTIONAL)
-    endif(MSVC)
-endif()
+#
+# Those directives are only used when creating a standalone `udmp_parser` python package
+#
+target_include_directories(udmp_parser PRIVATE ../lib)
+install(TARGETS udmp_parser LIBRARY DESTINATION .)
+install(DIRECTORY udmp_parser-stubs DESTINATION .)
 
 if(WIN32)
     target_compile_definitions(udmp_parser PRIVATE NOMINMAX)
