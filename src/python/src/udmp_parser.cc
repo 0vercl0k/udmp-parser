@@ -303,7 +303,7 @@ NB_MODULE(udmp_parser, m) {
 
   nb::class_<udmpparser::FileMapReader_t>(m, "FileMapReader")
       .def(nb::init<>())
-      .def("ViewBase", &udmpparser::FileMapReader_t::ViewBase)
+      .def("ViewSize", &udmpparser::FileMapReader_t::ViewSize)
       .def("MapFile", &udmpparser::FileMapReader_t::MapFile);
 
   nb::enum_<udmpparser::Arch_t>(m, "Arch")
