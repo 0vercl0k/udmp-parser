@@ -1328,7 +1328,8 @@ private:
           uint64_t(MemoryInfoList.SizeOfHeader) +
           (uint64_t(MemoryInfoList.SizeOfEntry) * MemoryInfoIdx);
       dmp::MemoryInfo_t CurrentMemoryInfo;
-      if (!Reader_->ReadTFromDirectory(StreamDirectory, CurrentMemoryInfoOffset,
+      if (!Reader_->ReadTFromDirectory(StreamDirectory,
+                                       size_t(CurrentMemoryInfoOffset),
                                        CurrentMemoryInfo)) {
         return false;
       }

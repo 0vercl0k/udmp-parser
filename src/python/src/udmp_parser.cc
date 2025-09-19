@@ -301,10 +301,10 @@ NB_MODULE(udmp_parser, m) {
       .def_ro("ThreadContext",
               &udmpparser::dmp::ExceptionStream_t::ThreadContext);
 
-  nb::class_<udmpparser::FileMap_t>(m, "FileMapReader")
+  nb::class_<udmpparser::FileMapReader_t>(m, "FileMapReader")
       .def(nb::init<>())
-      .def("ViewBase", &udmpparser::FileMap_t::ViewBase)
-      .def("MapFile", &udmpparser::FileMap_t::MapFile);
+      .def("ViewBase", &udmpparser::FileMapReader_t::ViewBase)
+      .def("MapFile", &udmpparser::FileMapReader_t::MapFile);
 
   nb::enum_<udmpparser::Arch_t>(m, "Arch")
       .value("X86", udmpparser::Arch_t::X86)
