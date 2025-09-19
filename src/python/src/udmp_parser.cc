@@ -342,9 +342,11 @@ NB_MODULE(udmp_parser, m) {
 
   nb::class_<udmpparser::Thread_t>(m, "Thread")
       .def(nb::init<const udmpparser::dmp::ThreadEntry_t &,
-                    UnknownContext_t &>())
-      .def(nb::init<const udmpparser::dmp::ThreadEntry_t &, Context32_t &>())
-      .def(nb::init<const udmpparser::dmp::ThreadEntry_t &, Context64_t &>())
+                    udmpparser::UnknownContext_t &>())
+      .def(nb::init<const udmpparser::dmp::ThreadEntry_t &,
+                    udmpparser::Context32_t &>())
+      .def(nb::init<const udmpparser::dmp::ThreadEntry_t &,
+                    udmpparser::Context64_t &>())
       .def_ro("ThreadId", &udmpparser::Thread_t::ThreadId)
       .def_ro("SuspendCount", &udmpparser::Thread_t::SuspendCount)
       .def_ro("PriorityClass", &udmpparser::Thread_t::PriorityClass)
