@@ -591,6 +591,10 @@ public:
     DWORD High = 0;
     const DWORD Low = GetFileSize(File, &High);
     const DWORD64 FileSize = (DWORD64(High) << 32) | DWORD64(Low);
+    if (FileSize > std::numeric_limits<size_t>::max()) {
+      DbgPrintf("FileSize is larger than size_t's capacity.");
+      return false;
+    }
 
     //
     // Create the ro file mapping.
@@ -631,7 +635,7 @@ public:
       return false;
     }
 
-    View_ = std::span((uint8_t *)ViewBase, FileSize);
+    View_ = std::span((uint8_t *)ViewBase, size_t(FileSize));
     return true;
   }
 };
