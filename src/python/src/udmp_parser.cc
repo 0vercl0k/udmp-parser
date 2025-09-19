@@ -323,11 +323,10 @@ NB_MODULE(udmp_parser, m) {
       .def_ro("DataOffset", &udmpparser::MemBlock_t::DataOffset)
       .def_ro("DataSize", &udmpparser::MemBlock_t::DataSize)
       .def("__repr__", &udmpparser::MemBlock_t::to_string);
-  ;
 
   nb::class_<udmpparser::Module_t>(m, "Module")
-      .def(nb::init<const udmpparser::dmp::ModuleEntry_t &, const std::string &,
-                    const void *, const void *>(),
+      .def(nb::init<const dmp::ModuleEntry_t &, const std::string &,
+                    std::vector<uint8_t>, std::vector<uint8_t>>(),
            nb::rv_policy::take_ownership)
       .def_ro("BaseOfImage", &udmpparser::Module_t::BaseOfImage)
       .def_ro("SizeOfImage", &udmpparser::Module_t::SizeOfImage)
@@ -342,8 +341,9 @@ NB_MODULE(udmp_parser, m) {
   nb::class_<udmpparser::UnknownContext_t>(m, "UnknownContext");
 
   nb::class_<udmpparser::Thread_t>(m, "Thread")
-      .def(nb::init<const udmpparser::dmp::ThreadEntry_t &, const void *,
-                    const std::optional<udmpparser::ProcessorArch_t> &>())
+      .def(nb::init<const dmp::ThreadEntry_t &, UnknownContext_t &>())
+      .def(nb::init<const dmp::ThreadEntry_t &, Context32_t &>())
+      .def(nb::init<const dmp::ThreadEntry_t &, Context64_t &>())
       .def_ro("ThreadId", &udmpparser::Thread_t::ThreadId)
       .def_ro("SuspendCount", &udmpparser::Thread_t::SuspendCount)
       .def_ro("PriorityClass", &udmpparser::Thread_t::PriorityClass)
