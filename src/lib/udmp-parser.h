@@ -484,9 +484,23 @@ public:
 
   bool ReadFromLocation32(const dmp::LocationDescriptor32_t &Location,
                           const size_t Offset, std::span<uint8_t> Dest) {
+
+    //
+    // Exit early if the location is empty (to not trigger the `=` in the below
+    // check).
+    //
+
     if (Dest.size_bytes() == 0) {
       return true;
     }
+
+    //
+    // Check if there's any overflows, if what we are reading is indeed
+    // contained in the block of memory described by `Location`. Worth noting
+    // that those are useful to detect functional issues but not for memory
+    // safety. The ones in `Read` are really the one that'll prevent callers
+    // from reading out of bounds.
+    //
 
     const size_t EndOffset = Offset + Dest.size_bytes();
     if (EndOffset <= Offset) {
@@ -516,7 +530,7 @@ public:
   template <typename Pod_t>
   bool ReadTFromDirectory(const dmp::Directory_t &Directory,
                           const size_t Offset, Pod_t &Dest) {
-    std::span<uint8_t> Span((uint8_t *)&Dest, (uint8_t *)(&Dest + 1));
+    std::span<uint8_t> Span((uint8_t *)&Dest, sizeof(Dest));
     return ReadFromLocation32(Directory.Location, Offset, Span);
   }
 };
@@ -576,7 +590,7 @@ public:
 
     DWORD High = 0;
     const DWORD Low = GetFileSize(File, &High);
-    const DWORD FileSize = (DWORD64(High) << 32) | DWORD64(Low);
+    const DWORD64 FileSize = (DWORD64(High) << 32) | DWORD64(Low);
 
     //
     // Create the ro file mapping.
@@ -617,8 +631,7 @@ public:
       return false;
     }
 
-    PVOID ViewEnd = (uint8_t *)ViewBase + FileSize;
-    View_ = std::span((uint8_t *)ViewBase, (uint8_t *)ViewEnd);
+    View_ = std::span((uint8_t *)ViewBase, FileSize);
     return true;
   }
 };
@@ -659,8 +672,7 @@ public:
       return false;
     }
 
-    uint8_t *ViewEnd = ViewBase + Stat.st_size;
-    View_ = std::span(ViewBase, ViewEnd);
+    View_ = std::span(ViewBase, Stat.st_size);
     return true;
   }
 };
