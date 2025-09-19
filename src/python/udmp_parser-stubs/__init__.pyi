@@ -224,7 +224,7 @@ class MemBlock:
     State: int
     Protect: int
     Type: int
-    Data: int
+    DataOffset: int
     DataSize: int
 
     def __init__(self, arg: udmp_parser.MemoryInfo, /) -> None: ...
