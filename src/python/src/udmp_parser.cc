@@ -321,9 +321,7 @@ NB_MODULE(udmp_parser, m) {
       .def_ro("State", &udmpparser::MemBlock_t::State)
       .def_ro("Protect", &udmpparser::MemBlock_t::Protect)
       .def_ro("Type", &udmpparser::MemBlock_t::Type)
-      .def_prop_ro(
-          "Data",
-          [](const udmpparser::MemBlock_t &m) { return uintptr_t(m.Data); })
+      .def_ro("DataOffset", &udmpparser::MemBlock_t::DataOffset)
       .def_ro("DataSize", &udmpparser::MemBlock_t::DataSize)
       .def("__repr__", &udmpparser::MemBlock_t::to_string);
   ;

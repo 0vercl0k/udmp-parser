@@ -55,7 +55,7 @@ class TestParserBasic(unittest.TestCase):
 
     def test_version(self):
         assert udmp_parser.version.major == 0
-        assert udmp_parser.version.minor == 6
+        assert udmp_parser.version.minor == 7
         assert udmp_parser.version.release == ""
 
     def test_parser_basic(self):
