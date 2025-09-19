@@ -478,7 +478,7 @@ public:
   }
 
   template <typename Pod_t> bool ReadT(const size_t Offset, Pod_t &Dest) {
-    std::span<uint8_t> Span((uint8_t *)&Dest, 1);
+    std::span<uint8_t> Span((uint8_t *)&Dest, sizeof(Dest));
     return Read(Offset, Span);
   }
 
