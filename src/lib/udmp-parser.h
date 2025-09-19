@@ -458,7 +458,7 @@ public:
 
   const uint8_t *ViewBase() const { return &View_.front(); }
   const uint8_t *ViewEnd() const { return &View_.back(); }
-  const size_t ViewSize() const { return View_.size_bytes(); }
+  size_t ViewSize() const { return View_.size_bytes(); }
 
   bool Read(const size_t Offset, std::span<uint8_t> Dest) {
     const size_t EndOffset = Offset + Dest.size_bytes();
@@ -522,7 +522,7 @@ public:
 };
 
 #if defined(WINDOWS)
-class FileMap_t : public MemoryReader_t {
+class FileMapReader_t : public MemoryReader_t {
 
   //
   // Handle to the file mapping.
@@ -531,7 +531,7 @@ class FileMap_t : public MemoryReader_t {
   HANDLE FileMap_ = nullptr;
 
 public:
-  ~FileMap_t() override {
+  ~FileMapReader_t() override {
     //
     // Unmap the view of the mapping..
     //
@@ -618,25 +618,18 @@ public:
     }
 
     PVOID ViewEnd = (uint8_t *)ViewBase + FileSize;
-
     View_ = std::span((uint8_t *)ViewBase, (uint8_t *)ViewEnd);
-
-    //
-    // Everything went well, so grab a copy of the handles for
-    // our class and null-out the temporary variables.
-    //
-
     return true;
   }
 };
 
 #elif defined(LINUX)
 
-class FileMap_t : public MemoryView_t {
+class FileMapReader_t : public MemoryReader_t {
   int Fd_ = -1;
 
 public:
-  ~FileMap_t() {
+  ~FileMapReader_t() override {
     if (!View_.empty()) {
       munmap((void *)ViewBase(), ViewSize());
     }
@@ -660,7 +653,7 @@ public:
     }
 
     uint8_t *ViewBase =
-        mmap(nullptr, Stat.st_size, PROT_READ, MAP_SHARED, Fd_, 0);
+        (uint8_t *)mmap(nullptr, Stat.st_size, PROT_READ, MAP_SHARED, Fd_, 0);
     if (ViewBase == MAP_FAILED) {
       perror("Could not mmap");
       return false;
@@ -825,7 +818,7 @@ public:
       return false;
     }
 
-    auto FileMapReader = std::make_shared<FileMap_t>();
+    auto FileMapReader = std::make_shared<FileMapReader_t>();
     if (!FileMapReader->MapFile(PathFile)) {
       DbgPrintf("MapFile failed.\n");
       return false;
@@ -933,16 +926,16 @@ public:
       return Out;
     }
 
-    const auto OffsetFromStart = Address - Block->BaseAddress;
-    const auto RemainingSize = Block->DataSize - OffsetFromStart;
+    const uint64_t OffsetFromStart = Address - Block->BaseAddress;
+    const uint64_t RemainingSize = Block->DataSize - OffsetFromStart;
     if (RemainingSize > uint64_t(std::numeric_limits<size_t>::max())) {
       DbgPrintf("RemainingSize truncation to usize would be lossy.\n");
       return std::nullopt;
     }
 
-    const auto DumpSize = std::min(size_t(RemainingSize), Size);
+    const size_t DumpSize = std::min(size_t(RemainingSize), Size);
     Out.resize(DumpSize);
-    if (!Reader_->Read(Block->DataOffset + OffsetFromStart, Out)) {
+    if (!Reader_->Read(size_t(Block->DataOffset + OffsetFromStart), Out)) {
       DbgPrintf("Failed to ReadMemory.\n");
       return std::nullopt;
     }

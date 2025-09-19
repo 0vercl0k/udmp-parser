@@ -301,11 +301,10 @@ NB_MODULE(udmp_parser, m) {
       .def_ro("ThreadContext",
               &udmpparser::dmp::ExceptionStream_t::ThreadContext);
 
-  nb::class_<udmpparser::FileMap_t>(m, "FileMap")
+  nb::class_<udmpparser::FileMap_t>(m, "FileMapReader")
       .def(nb::init<>())
       .def("ViewBase", &udmpparser::FileMap_t::ViewBase)
-      .def("MapFile", &udmpparser::FileMap_t::MapFile)
-      .def("InBounds", &udmpparser::FileMap_t::InBounds);
+      .def("MapFile", &udmpparser::FileMap_t::MapFile);
 
   nb::enum_<udmpparser::Arch_t>(m, "Arch")
       .value("X86", udmpparser::Arch_t::X86)
@@ -336,14 +335,8 @@ NB_MODULE(udmp_parser, m) {
       .def_ro("TimeDateStamp", &udmpparser::Module_t::TimeDateStamp)
       .def_ro("ModuleName", &udmpparser::Module_t::ModuleName)
       .def_ro("VersionInfo", &udmpparser::Module_t::VersionInfo)
-      .def_prop_ro(
-          "CvRecord",
-          [](const udmpparser::Module_t &m) { return uintptr_t(m.CvRecord); })
-      .def_ro("CvRecordSize", &udmpparser::Module_t::CvRecordSize)
-      .def_prop_ro(
-          "MiscRecord",
-          [](const udmpparser::Module_t &m) { return uintptr_t(m.MiscRecord); })
-      .def_ro("MiscRecordSize", &udmpparser::Module_t::MiscRecordSize)
+      .def_ro("CvRecord", &udmpparser::Module_t::CvRecord)
+      .def_ro("MiscRecord", &udmpparser::Module_t::MiscRecord)
       .def("__repr__", &udmpparser::Module_t::to_string);
 
   nb::class_<udmpparser::UnknownContext_t>(m, "UnknownContext");
