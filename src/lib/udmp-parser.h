@@ -478,7 +478,7 @@ public:
   }
 
   template <typename Pod_t> bool ReadT(const size_t Offset, Pod_t &Dest) {
-    std::span<uint8_t> Span((uint8_t *)&Dest, (uint8_t *)(&Dest + 1));
+    std::span<uint8_t> Span((uint8_t *)&Dest, 1);
     return Read(Offset, Span);
   }
 
@@ -1162,20 +1162,22 @@ private:
     //
 
     C_t Context;
-    if (ThreadContext.DataSize < sizeof(Context)) {
-      DbgPrintf("The size of the Context doesn't match up with the thread "
-                "context's length.\n");
-      return false;
-    }
+    if (!std::is_same<C_t, UnknownContext_t>()) {
+      if (ThreadContext.DataSize < sizeof(Context)) {
+        DbgPrintf("The size of the Context doesn't match up with the thread "
+                  "context's length.\n");
+        return false;
+      }
 
-    //
-    // Read it..
-    //
+      //
+      // Read it..
+      //
 
-    if (!Reader_->ReadT(ThreadContext.Rva, Context)) {
-      DbgPrintf("Failed to read Context for Thread %" PRIu32 ".\n",
-                Thread.ThreadId);
-      return false;
+      if (!Reader_->ReadT(ThreadContext.Rva, Context)) {
+        DbgPrintf("Failed to read Context for Thread %" PRIu32 ".\n",
+                  Thread.ThreadId);
+        return false;
+      }
     }
 
     //
