@@ -1,7 +1,7 @@
 ﻿# Axel '0vercl0k' Souchet - January 22 2022
 # Note: the cmake version must be the same as in python/pyproject.toml::tool.scikit-build:cmake.minimum-version
 cmake_minimum_required(VERSION 3.21)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_POSITION_INDEPENDENT_CODE True)
 
