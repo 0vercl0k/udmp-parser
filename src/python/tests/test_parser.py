@@ -55,7 +55,7 @@ class TestParserBasic(unittest.TestCase):
 
     def test_version(self):
         assert udmp_parser.version.major == 0
-        assert udmp_parser.version.minor == 6
+        assert udmp_parser.version.minor == 7
         assert udmp_parser.version.release == ""
 
     def test_parser_basic(self):
@@ -113,7 +113,7 @@ class TestParserBasic(unittest.TestCase):
             assert mod.BaseOfImage > 0, f"Invalid BaseOfImage for '{mod}'"
             assert mod.SizeOfImage > 0, f"Invalid SizeOfImage for '{mod}'"
             module_raw = parser.ReadMemory(mod.BaseOfImage, mod.SizeOfImage)
-            img = lief.PE.parse(raw=module_raw)
+            img = lief.PE.parse(module_raw)
             assert img
             assert img.header.numberof_sections
             assert img.optional_header.sizeof_code

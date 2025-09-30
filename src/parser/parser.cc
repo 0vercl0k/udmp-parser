@@ -156,14 +156,14 @@ void PrintContext(const udmpparser::Thread_t &T, const int Prefix = 0) {
   printf("%*cUnknown type of context!\n", Prefix, ' ');
 }
 
-void Hexdump(const uint64_t Address, const void *Buffer, const size_t Len,
+void Hexdump(const uint64_t Address, const std::span<uint8_t> Buffer,
              const int Prefix = 0) {
-  const uint8_t *Ptr = (uint8_t *)Buffer;
+  const auto Len = Buffer.size_bytes();
   for (size_t i = 0; i < Len; i += 16) {
     printf("%*c%" PRIx64 ": ", Prefix, ' ', Address + i);
     for (size_t j = 0; j < 16; j++) {
       if (i + j < Len) {
-        printf("%02" PRIx8, Ptr[i + j]);
+        printf("%02" PRIx8, Buffer[i + j]);
       } else {
         printf("   ");
       }
@@ -171,7 +171,7 @@ void Hexdump(const uint64_t Address, const void *Buffer, const size_t Len,
     printf(" |");
     for (size_t j = 0; j < 16; j++) {
       if (i + j < Len) {
-        printf("%c", isprint(Ptr[i + j]) ? char(Ptr[i + j]) : '.');
+        printf("%c", isprint(Buffer[i + j]) ? char(Buffer[i + j]) : '.');
       } else {
         printf(" ");
       }
@@ -451,9 +451,9 @@ int main(int argc, char *argv[]) {
       //
 
       if (Descriptor.DataSize >= 4) {
+        auto Data = UserDump.ReadMemory(Descriptor.BaseAddress, 4);
         printf("   %02" PRIx8 " %02" PRIx8 " %02" PRIx8 " %02" PRIx8 "...",
-               Descriptor.Data[0], Descriptor.Data[1], Descriptor.Data[2],
-               Descriptor.Data[3]);
+               (*Data)[0], (*Data)[1], (*Data)[2], (*Data)[3]);
       }
 
       //
@@ -539,8 +539,8 @@ int main(int argc, char *argv[]) {
         const auto Remaining = size_t(BlockDataSize - OffsetFromStart);
         const size_t MaxSize = 0x100;
         const size_t DumpSize = std::min(MaxSize, Remaining);
-        utils::Hexdump(BlockStart + OffsetFromStart,
-                       Block->Data + OffsetFromStart, DumpSize, 2);
+        auto Data = UserDump.ReadMemory(BlockStart + OffsetFromStart, DumpSize);
+        utils::Hexdump(BlockStart + OffsetFromStart, *Data, 2);
       } else {
         printf("The dump does not have the content of the memory at %" PRIx64
                "\n",

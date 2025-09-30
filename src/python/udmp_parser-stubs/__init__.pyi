@@ -149,10 +149,9 @@ class Directory:
     LocationDescriptor32_t: int
 
 
-class FileMap:
-    def InBounds(self, arg0: int, arg1: int, /) -> bool: ...
+class FileMapReader:
     def MapFile(self, arg: str, /) -> bool: ...
-    def ViewBase(self) -> int: ...
+    def ViewSize(self) -> int: ...
     def __init__(self) -> None: ...
 
 
@@ -224,7 +223,7 @@ class MemBlock:
     State: int
     Protect: int
     Type: int
-    Data: int
+    DataOffset: int
     DataSize: int
 
     def __init__(self, arg: udmp_parser.MemoryInfo, /) -> None: ...

@@ -301,11 +301,10 @@ NB_MODULE(udmp_parser, m) {
       .def_ro("ThreadContext",
               &udmpparser::dmp::ExceptionStream_t::ThreadContext);
 
-  nb::class_<udmpparser::FileMap_t>(m, "FileMap")
+  nb::class_<udmpparser::FileMapReader_t>(m, "FileMapReader")
       .def(nb::init<>())
-      .def("ViewBase", &udmpparser::FileMap_t::ViewBase)
-      .def("MapFile", &udmpparser::FileMap_t::MapFile)
-      .def("InBounds", &udmpparser::FileMap_t::InBounds);
+      .def("ViewSize", &udmpparser::FileMapReader_t::ViewSize)
+      .def("MapFile", &udmpparser::FileMapReader_t::MapFile);
 
   nb::enum_<udmpparser::Arch_t>(m, "Arch")
       .value("X86", udmpparser::Arch_t::X86)
@@ -321,16 +320,13 @@ NB_MODULE(udmp_parser, m) {
       .def_ro("State", &udmpparser::MemBlock_t::State)
       .def_ro("Protect", &udmpparser::MemBlock_t::Protect)
       .def_ro("Type", &udmpparser::MemBlock_t::Type)
-      .def_prop_ro(
-          "Data",
-          [](const udmpparser::MemBlock_t &m) { return uintptr_t(m.Data); })
+      .def_ro("DataOffset", &udmpparser::MemBlock_t::DataOffset)
       .def_ro("DataSize", &udmpparser::MemBlock_t::DataSize)
       .def("__repr__", &udmpparser::MemBlock_t::to_string);
-  ;
 
   nb::class_<udmpparser::Module_t>(m, "Module")
       .def(nb::init<const udmpparser::dmp::ModuleEntry_t &, const std::string &,
-                    const void *, const void *>(),
+                    std::vector<uint8_t>, std::vector<uint8_t>>(),
            nb::rv_policy::take_ownership)
       .def_ro("BaseOfImage", &udmpparser::Module_t::BaseOfImage)
       .def_ro("SizeOfImage", &udmpparser::Module_t::SizeOfImage)
@@ -338,21 +334,19 @@ NB_MODULE(udmp_parser, m) {
       .def_ro("TimeDateStamp", &udmpparser::Module_t::TimeDateStamp)
       .def_ro("ModuleName", &udmpparser::Module_t::ModuleName)
       .def_ro("VersionInfo", &udmpparser::Module_t::VersionInfo)
-      .def_prop_ro(
-          "CvRecord",
-          [](const udmpparser::Module_t &m) { return uintptr_t(m.CvRecord); })
-      .def_ro("CvRecordSize", &udmpparser::Module_t::CvRecordSize)
-      .def_prop_ro(
-          "MiscRecord",
-          [](const udmpparser::Module_t &m) { return uintptr_t(m.MiscRecord); })
-      .def_ro("MiscRecordSize", &udmpparser::Module_t::MiscRecordSize)
+      .def_ro("CvRecord", &udmpparser::Module_t::CvRecord)
+      .def_ro("MiscRecord", &udmpparser::Module_t::MiscRecord)
       .def("__repr__", &udmpparser::Module_t::to_string);
 
   nb::class_<udmpparser::UnknownContext_t>(m, "UnknownContext");
 
   nb::class_<udmpparser::Thread_t>(m, "Thread")
-      .def(nb::init<const udmpparser::dmp::ThreadEntry_t &, const void *,
-                    const std::optional<udmpparser::ProcessorArch_t> &>())
+      .def(nb::init<const udmpparser::dmp::ThreadEntry_t &,
+                    udmpparser::UnknownContext_t &>())
+      .def(nb::init<const udmpparser::dmp::ThreadEntry_t &,
+                    udmpparser::Context32_t &>())
+      .def(nb::init<const udmpparser::dmp::ThreadEntry_t &,
+                    udmpparser::Context64_t &>())
       .def_ro("ThreadId", &udmpparser::Thread_t::ThreadId)
       .def_ro("SuspendCount", &udmpparser::Thread_t::SuspendCount)
       .def_ro("PriorityClass", &udmpparser::Thread_t::PriorityClass)

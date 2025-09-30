@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "udmp-parser"
-version = "0.6.0"
+version = "0.7.0"
 description = "A Cross-Platform C++ parser library for Windows user minidumps."
 readme = "README.md"
 requires-python = ">=3.8"
