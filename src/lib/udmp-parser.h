@@ -415,7 +415,7 @@ struct SystemInfoStream_t {
   uint16_t Reserved2 = 0;
 };
 
-static_assert(sizeof(SystemInfoStream_t) == 32);
+static_assert(sizeof(SystemInfoStream_t) == 0x20);
 
 constexpr uint32_t kEXCEPTION_MAXIMUM_PARAMETERS = 15;
 
@@ -445,19 +445,17 @@ static_assert(sizeof(ExceptionStream_t) == 0xa8);
 
 class MemoryReader_t {
 protected:
-  std::span<uint8_t> View_;
+  std::span<const uint8_t> View_;
 
 public:
   MemoryReader_t() = default;
   virtual ~MemoryReader_t() = default;
-  MemoryReader_t(const std::span<uint8_t> View) : View_(View) {}
+  MemoryReader_t(const std::span<const uint8_t> View) : View_(View) {}
   MemoryReader_t(MemoryReader_t &&) = default;
   MemoryReader_t(const MemoryReader_t &) = delete;
   MemoryReader_t &operator=(MemoryReader_t &&) = default;
   MemoryReader_t &operator=(const MemoryReader_t &) = delete;
 
-  const uint8_t *ViewBase() const { return &View_.front(); }
-  const uint8_t *ViewEnd() const { return &View_.back(); }
   size_t ViewSize() const { return View_.size_bytes(); }
 
   bool Read(const size_t Offset, std::span<uint8_t> Dest) {
@@ -648,7 +646,7 @@ class FileMapReader_t : public MemoryReader_t {
 public:
   ~FileMapReader_t() override {
     if (!View_.empty()) {
-      munmap((void *)ViewBase(), ViewSize());
+      munmap((void *)View_.data(), ViewSize());
     }
 
     if (Fd_ != -1) {
