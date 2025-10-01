@@ -28,7 +28,7 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Environment Setup (Windows)
       if: matrix.variant.os == 'windows-2025'
@@ -86,10 +86,10 @@ jobs:
       CMAKE_FLAGS: "-DBUILD_PARSER:BOOL=OFF -DBUILD_PYTHON_BINDING:BOOL=ON"
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Build / test wheels
-      uses: pypa/cibuildwheel@v2.21.3
+      uses: pypa/cibuildwheel@v3.2.0
       with:
         package-dir: ./src/python
 
