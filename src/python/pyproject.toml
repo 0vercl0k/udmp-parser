@@ -40,7 +40,7 @@ cmake.minimum-version = "3.21"
 
 [tool.cibuildwheel]
 build-verbosity = 1
-skip = "cp37-* pp* *musllinux*"
+skip = "*musllinux*"
 before-test = "pip install -U -r {project}/src/python/tests/requirements.txt"
 test-command = "pytest -vvv {project}/src/python/tests"
 
