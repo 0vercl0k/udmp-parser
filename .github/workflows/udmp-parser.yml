@@ -16,10 +16,8 @@ jobs:
           - {os: ubuntu-22.04,        generator: clang,   arch: x64,      config: RelWithDebInfo, }
           - {os: ubuntu-24.04,        generator: gcc,     arch: x64,      config: RelWithDebInfo, }
           - {os: ubuntu-24.04,        generator: clang,   arch: x64,      config: RelWithDebInfo, }
-          - {os: macos-13,            generator: clang,   arch: x64,      config: Release,        }
-          # - {os: macos-13-xlarge,     generator: clang,   arch: arm64,    config: Release,        } # Paying runner
-          - {os: macos-14,            generator: clang,   arch: arm64,    config: Release,        }
-          # - {os: macos-14-large,      generator: clang,   arch: x64,      config: Release,        } # Paying runner
+          - {os: macos-15-intel,      generator: clang,   arch: x64,      config: Release,        }
+          - {os: macos-15,            generator: clang,   arch: arm64,    config: Release,        }
     runs-on: ${{ matrix.variant.os }}
     name: parser / ${{ matrix.variant.os }} / ${{ matrix.variant.generator }} / ${{ matrix.variant.arch }}
     env:
@@ -28,7 +26,7 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Environment Setup (Windows)
       if: matrix.variant.os == 'windows-2025'
@@ -78,18 +76,17 @@ jobs:
           # Available runners: https://github.com/actions/runner-images
           - {os: windows-2025, config: RelWithDebInfo }
           - {os: ubuntu-22.04, config: RelWithDebInfo }
-          # most up to date free intel based osx?
-          - {os: macos-13, config: Release }
+          - {os: macos-15-intel, config: Release }
     runs-on: ${{ matrix.variant.os }}
     name: bindings / ${{ matrix.variant.os }}
     env:
       CMAKE_FLAGS: "-DBUILD_PARSER:BOOL=OFF -DBUILD_PYTHON_BINDING:BOOL=ON"
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Build / test wheels
-      uses: pypa/cibuildwheel@v2.21.3
+      uses: pypa/cibuildwheel@v3.2.0
       with:
         package-dir: ./src/python
 
