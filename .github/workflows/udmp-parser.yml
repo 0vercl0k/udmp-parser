@@ -76,8 +76,7 @@ jobs:
           # Available runners: https://github.com/actions/runner-images
           - {os: windows-2025, config: RelWithDebInfo }
           - {os: ubuntu-22.04, config: RelWithDebInfo }
-          # most up to date free intel based osx?
-          - {os: macos-13, config: Release }
+          - {os: macos-15-intel, config: Release }
     runs-on: ${{ matrix.variant.os }}
     name: bindings / ${{ matrix.variant.os }}
     env:
