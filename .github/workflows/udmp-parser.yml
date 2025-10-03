@@ -16,10 +16,8 @@ jobs:
           - {os: ubuntu-22.04,        generator: clang,   arch: x64,      config: RelWithDebInfo, }
           - {os: ubuntu-24.04,        generator: gcc,     arch: x64,      config: RelWithDebInfo, }
           - {os: ubuntu-24.04,        generator: clang,   arch: x64,      config: RelWithDebInfo, }
-          - {os: macos-13,            generator: clang,   arch: x64,      config: Release,        }
-          # - {os: macos-13-xlarge,     generator: clang,   arch: arm64,    config: Release,        } # Paying runner
-          - {os: macos-14,            generator: clang,   arch: arm64,    config: Release,        }
-          # - {os: macos-14-large,      generator: clang,   arch: x64,      config: Release,        } # Paying runner
+          - {os: macos-15-intel,      generator: clang,   arch: x64,      config: Release,        }
+          - {os: macos-15,            generator: clang,   arch: arm64,    config: Release,        }
     runs-on: ${{ matrix.variant.os }}
     name: parser / ${{ matrix.variant.os }} / ${{ matrix.variant.generator }} / ${{ matrix.variant.arch }}
     env:
