@@ -38,7 +38,7 @@ find_package(nanobind CONFIG REQUIRED)
 
 set(CMAKE_CXX_STANDARD 20)
 
-nanobind_add_module(udmp_parser NB_STATIC src/udmp_parser_utils.cc src/udmp_parser.cc)
+nanobind_add_module(udmp_parser STABLE_ABI src/udmp_parser_utils.cc src/udmp_parser.cc)
 
 if(MSVC)
     target_link_libraries(udmp_parser PRIVATE DbgHelp.lib)
