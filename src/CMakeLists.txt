@@ -12,6 +12,8 @@ project(
     VERSION 0.6.0
 )
 
+include(CTest)
+
 set(PROJECT_AUTHOR 0vercl0k)
 set(PROJECT_LICENSE MIT)
 
@@ -23,3 +25,7 @@ add_subdirectory(lib)
 if(BUILD_PARSER)
     add_subdirectory(parser)
 endif(BUILD_PARSER)
+
+if(BUILD_TESTING)
+    add_subdirectory(tests)
+endif(BUILD_TESTING)

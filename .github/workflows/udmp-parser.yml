@@ -21,7 +21,7 @@ jobs:
     runs-on: ${{ matrix.variant.os }}
     name: parser / ${{ matrix.variant.os }} / ${{ matrix.variant.generator }} / ${{ matrix.variant.arch }}
     env:
-      CMAKE_FLAGS: "-DBUILD_PARSER:BOOL=ON -DBUILD_PYTHON_BINDING:BOOL=OFF"
+      CMAKE_FLAGS: "-DBUILD_PARSER:BOOL=ON -DBUILD_PYTHON_BINDING:BOOL=OFF -DBUILD_TESTING:BOOL=ON"
       CMAKE_ARCH: ""
 
     steps:
@@ -60,6 +60,7 @@ jobs:
         mkdir artifact
         cmake -S ./src -B ./build ${{ env.CMAKE_ARCH }} ${{ env.CMAKE_FLAGS }}
         cmake --build ./build --verbose --config ${{ matrix.variant.config }}
+        ctest --test-dir ./build --output-on-failure -C ${{ matrix.variant.config }}
         cmake --install ./build  --config ${{ matrix.variant.config }} --prefix ./artifact
 
     - name: Upload artifacts
